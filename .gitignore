@@ -20,3 +20,6 @@ Package.resolved
 *.ipa
 *.dSYM.zip
 *.dSYM
+
+# XcodeGen output
+*.xcodeproj

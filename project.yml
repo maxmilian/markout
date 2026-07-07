@@ -1,0 +1,56 @@
+name: Markout
+options:
+  bundleIdPrefix: tech.ankey
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+packages:
+  cmark:
+    url: https://github.com/apple/swift-cmark.git
+    branch: gfm
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  Markout:
+    type: application
+    platform: macOS
+    sources:
+      - Sources/Markout
+      - path: Sources/Markout/Render/default.css
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: tech.ankey.Markout
+        INFOPLIST_FILE: Resources/Info.plist
+        ENABLE_HARDENED_RUNTIME: YES
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGNING_REQUIRED: NO
+        GENERATE_INFOPLIST_FILE: NO
+    dependencies:
+      - package: cmark
+        product: cmark-gfm
+      - package: cmark
+        product: cmark-gfm-extensions
+  MarkoutTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests/MarkoutTests
+    dependencies:
+      - target: Markout
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: tech.ankey.MarkoutTests
+schemes:
+  Markout:
+    build:
+      targets:
+        Markout: all
+        MarkoutTests: [test]
+    test:
+      targets:
+        - MarkoutTests
