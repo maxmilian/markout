@@ -1,0 +1,12 @@
+/* Minimal GitHub-dark syntax theme for highlight.js, applied under [data-theme="dark"].
+   Full upstream themes may be substituted; see ../VERSIONS.md. */
+[data-theme="dark"] .hljs { color: #e6edf3; background: transparent; }
+[data-theme="dark"] .hljs-comment, [data-theme="dark"] .hljs-quote { color: #8b949e; font-style: italic; }
+[data-theme="dark"] .hljs-keyword, [data-theme="dark"] .hljs-selector-tag, [data-theme="dark"] .hljs-type { color: #ff7b72; }
+[data-theme="dark"] .hljs-string, [data-theme="dark"] .hljs-attr, [data-theme="dark"] .hljs-template-tag, [data-theme="dark"] .hljs-addition { color: #a5d6ff; }
+[data-theme="dark"] .hljs-title, [data-theme="dark"] .hljs-title.function_, [data-theme="dark"] .hljs-section { color: #d2a8ff; }
+[data-theme="dark"] .hljs-number, [data-theme="dark"] .hljs-literal, [data-theme="dark"] .hljs-symbol, [data-theme="dark"] .hljs-bullet { color: #79c0ff; }
+[data-theme="dark"] .hljs-built_in, [data-theme="dark"] .hljs-class .hljs-title { color: #ffa657; }
+[data-theme="dark"] .hljs-variable, [data-theme="dark"] .hljs-template-variable, [data-theme="dark"] .hljs-attribute { color: #ffa657; }
+[data-theme="dark"] .hljs-meta { color: #8b949e; }
+[data-theme="dark"] .hljs-deletion { color: #ffdcd7; background: #67060c; }

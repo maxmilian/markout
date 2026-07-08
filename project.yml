@@ -21,6 +21,8 @@ targets:
       - Sources/Markout
       - path: Sources/Markout/Render/default.css
         buildPhase: resources
+      - path: Resources/PreviewAssets
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: tech.ankey.Markout

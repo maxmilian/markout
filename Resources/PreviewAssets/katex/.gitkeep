@@ -1,0 +1,1 @@
+Run ../fetch-assets.sh to populate katex.min.js/.css and fonts/ here (see ../VERSIONS.md).
