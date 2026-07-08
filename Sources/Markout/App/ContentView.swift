@@ -14,7 +14,11 @@ struct ContentView: View {
     var documentURL: URL? = nil
 
     @Environment(\.colorScheme) private var colorScheme
-    @AppStorage("previewThemeID") private var previewThemeID = "github"
+    @AppStorage(SettingsKey.previewThemeID) private var previewThemeID = SettingsDefault.previewThemeID
+    @AppStorage(SettingsKey.editorFontSize) private var editorFontSize = SettingsDefault.editorFontSize
+    @AppStorage(SettingsKey.editorThemeID) private var editorThemeID = SettingsDefault.editorThemeID
+    @AppStorage(SettingsKey.softWrap) private var softWrap = SettingsDefault.softWrap
+    @AppStorage(SettingsKey.showWordCount) private var showWordCount = SettingsDefault.showWordCount
 
     @StateObject private var bridge = EditorBridge()
     @State private var renderedHTML: String = ""
@@ -29,26 +33,34 @@ struct ContentView: View {
     }
 
     var body: some View {
-        HSplitView {
-            if showContents {
-                contentsSidebar
-                    .frame(minWidth: 180, idealWidth: 220, maxWidth: 320)
+        VStack(spacing: 0) {
+            HSplitView {
+                if showContents {
+                    contentsSidebar
+                        .frame(minWidth: 180, idealWidth: 220, maxWidth: 320)
+                }
+                EditorView(
+                    text: $document.text,
+                    onVisibleLineChange: { previewScrollLine = $0 },
+                    documentURL: documentURL,
+                    onEditorReady: { bridge.textView = $0 },
+                    fontSize: editorFontSize,
+                    editorThemeID: editorThemeID,
+                    softWrap: softWrap
+                )
+                .frame(minWidth: 320)
+                PreviewView(
+                    htmlBody: renderedHTML,
+                    isDark: colorScheme == .dark,
+                    previewCSS: activeTheme.css,
+                    scrollLine: previewScrollLine,
+                    onWebViewReady: { bridge.webView = $0 }
+                )
+                .frame(minWidth: 320)
             }
-            EditorView(
-                text: $document.text,
-                onVisibleLineChange: { previewScrollLine = $0 },
-                documentURL: documentURL,
-                onEditorReady: { bridge.textView = $0 }
-            )
-            .frame(minWidth: 320)
-            PreviewView(
-                htmlBody: renderedHTML,
-                isDark: colorScheme == .dark,
-                previewCSS: activeTheme.css,
-                scrollLine: previewScrollLine,
-                onWebViewReady: { bridge.webView = $0 }
-            )
-            .frame(minWidth: 320)
+            if showWordCount {
+                statusBar
+            }
         }
         .frame(minWidth: 800, minHeight: 500)
         .toolbar {
@@ -58,6 +70,22 @@ struct ContentView: View {
                 } label: {
                     Label("Contents", systemImage: "list.bullet.indent")
                 }
+            }
+            ToolbarItemGroup(placement: .automatic) {
+                Button { applyFormat(.bold) } label: { Image(systemName: "bold") }
+                    .help("Bold (⌘B)")
+                Button { applyFormat(.italic) } label: { Image(systemName: "italic") }
+                    .help("Italic (⌘I)")
+                Button { applyFormat(.inlineCode) } label: { Image(systemName: "chevron.left.forwardslash.chevron.right") }
+                    .help("Inline code")
+                Button { applyFormat(.heading(2)) } label: { Image(systemName: "number") }
+                    .help("Heading")
+                Button { applyFormat(.blockquote) } label: { Image(systemName: "text.quote") }
+                    .help("Blockquote")
+                Button { applyFormat(.list) } label: { Image(systemName: "list.bullet") }
+                    .help("List")
+                Button { applyFormat(.link) } label: { Image(systemName: "link") }
+                    .help("Link (⌘K)")
             }
             ToolbarItem(placement: .automatic) {
                 Picker("Preview Theme", selection: $previewThemeID) {
@@ -71,10 +99,26 @@ struct ContentView: View {
         .focusedSceneValue(\.documentActions, DocumentActions(
             exportHTML: exportHTML,
             exportPDF: exportPDF,
-            insertTableOfContents: insertTableOfContents
+            insertTableOfContents: insertTableOfContents,
+            format: applyFormat
         ))
         .onAppear { render(document.text) }
         .onChange(of: document.text) { _, newValue in scheduleRender(newValue) }
+    }
+
+    // MARK: - Status bar
+
+    private var statusBar: some View {
+        let stats = DocumentStats.compute(document.text)
+        return HStack(spacing: 6) {
+            Spacer()
+            Text("\(stats.words) words · \(stats.characters) chars · ~\(stats.readingMinutes) min")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background(.bar)
     }
 
     // MARK: - Table of contents sidebar
@@ -148,6 +192,29 @@ struct ContentView: View {
         panel.nameFieldStringValue = suggestedName(ext: "pdf")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         Task { try? await PDFExporter.export(from: webView, to: url) }
+    }
+
+    /// Applies a `MarkdownFormatter` transform to the focused editor's current selection as a single
+    /// undoable edit, then lets the delegate's `textDidChange` sync the binding and rehighlight.
+    private func applyFormat(_ command: FormatCommand) {
+        guard let textView = bridge.textView else { return }
+        let text = textView.string
+        let selection = textView.selectedRange()
+        let result: FormatResult
+        switch command {
+        case .bold: result = MarkdownFormatter.toggleBold(text: text, selection: selection)
+        case .italic: result = MarkdownFormatter.toggleItalic(text: text, selection: selection)
+        case .inlineCode: result = MarkdownFormatter.toggleInlineCode(text: text, selection: selection)
+        case .blockquote: result = MarkdownFormatter.toggleBlockquote(text: text, selection: selection)
+        case .list: result = MarkdownFormatter.toggleList(text: text, selection: selection)
+        case .link: result = MarkdownFormatter.makeLink(text: text, url: "https://", selection: selection)
+        case .heading(let level): result = MarkdownFormatter.setHeading(text: text, level: level, selection: selection)
+        }
+        let fullRange = NSRange(location: 0, length: (text as NSString).length)
+        guard textView.shouldChangeText(in: fullRange, replacementString: result.text) else { return }
+        textView.textStorage?.replaceCharacters(in: fullRange, with: result.text)
+        textView.didChangeText()
+        textView.setSelectedRange(result.selection)
     }
 
     private func insertTableOfContents() {
