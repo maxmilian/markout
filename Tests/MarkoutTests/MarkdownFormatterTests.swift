@@ -54,4 +54,27 @@ struct MarkdownFormatterTests {
         let r = MarkdownFormatter.makeLink(text: "", url: "https://x.com", selection: sel("", 0, 0))
         #expect(r.text == "[](https://x.com)")
     }
+
+    // MARK: - Review fixes
+
+    @Test func italicOnBoldWrapsInsteadOfCorruptingBold() {
+        // ⌘I over a bold selection must not strip a `*` off each side (which would break the bold).
+        let r = MarkdownFormatter.toggleItalic(text: "**hello**", selection: sel("**hello**", 0, 9))
+        #expect(r.text == "***hello***")
+    }
+
+    @Test func inlineCodeDoesNotUnwrapLongerBacktickRun() {
+        let r = MarkdownFormatter.toggleInlineCode(text: "``x``", selection: sel("``x``", 0, 5))
+        #expect(r.text == "```x```")
+    }
+
+    @Test func toggleListPrefixesEverySelectedLine() {
+        let r = MarkdownFormatter.toggleList(text: "a\nb\nc", selection: NSRange(location: 0, length: 3))
+        #expect(r.text == "- a\n- b\nc")
+    }
+
+    @Test func toggleBlockquotePrefixesEverySelectedLine() {
+        let r = MarkdownFormatter.toggleBlockquote(text: "x\ny", selection: NSRange(location: 0, length: 3))
+        #expect(r.text == "> x\n> y")
+    }
 }

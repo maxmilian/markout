@@ -41,9 +41,21 @@ enum MarkdownFormatter {
         let markerLen = (marker as NSString).length
         let selected = ns.substring(with: range)
 
-        let isWrapped = selected.count >= 2 * marker.count
+        // 頭尾皆為 marker 且長度足夠。額外防呆：單字元 marker（`*` 斜體 / `` ` `` inline code）
+        // 不可把更長的同字元 run 誤判成「已包住」——否則對 `**hello**` 按斜體會剝成 `*hello*`、破壞粗體。
+        let n = marker.count
+        let endsWrapped = selected.count >= 2 * n
             && selected.hasPrefix(marker)
             && selected.hasSuffix(marker)
+        let isWrapped: Bool
+        if endsWrapped {
+            let markerChar = marker.first!
+            let chars = Array(selected)  // count >= 2n，以下索引皆在界內
+            isWrapped = chars.count == 2 * n
+                || (chars[n] != markerChar && chars[chars.count - n - 1] != markerChar)
+        } else {
+            isWrapped = false
+        }
 
         if isWrapped {
             // 剝掉頭尾標記
@@ -115,23 +127,37 @@ enum MarkdownFormatter {
         return NSRange(location: loc, length: len)
     }
 
-    /// 找出 selection.location 所在行的行範圍，套用 transform 後回寫。
-    /// selection 調整：以行首為錨點，把選取平移到轉換後的行首（維持零長度游標於行首之後）。
+    /// 對「selection 相交的每一行」套用 transform 後回寫（單行選取即單行，多行選取則逐行）。
+    /// selection 調整：以第一行行首為錨點，把選取平移到轉換後的區塊起點。
     private static func editLine(text: String, selection: NSRange, transform: (String) -> String) -> FormatResult {
         let ns = text as NSString
         let clamped = clamp(selection, length: ns.length)
-        let lineRange = ns.lineRange(for: NSRange(location: clamped.location, length: 0))
-        // lineRange 含換行字元；只轉換行內容、保留尾端換行。
-        let lineWithTerminator = ns.substring(with: lineRange)
-        let (content, terminator) = splitTerminator(lineWithTerminator)
-        let newContent = transform(content)
-        let newLine = newContent + terminator
-        let newText = ns.replacingCharacters(in: lineRange, with: newLine)
-        // 游標放到轉換後行首（lineRange.location），維持原長度但夾到新文字範圍。
+        // 涵蓋從「選取起點所在行」到「選取終點所在行」的整個區塊。
+        let startLine = ns.lineRange(for: NSRange(location: clamped.location, length: 0))
+        let endProbe = clamped.length > 0 ? NSMaxRange(clamped) - 1 : clamped.location
+        let endLine = ns.lineRange(for: NSRange(location: min(max(endProbe, 0), ns.length), length: 0))
+        let block = NSRange(location: startLine.location,
+                            length: NSMaxRange(endLine) - startLine.location)
+
+        // 逐行轉換：每行含換行字元，只轉換行內容、保留尾端換行。
+        var rebuilt = ""
+        var loc = block.location
+        while loc < NSMaxRange(block) {
+            let lineRange = ns.lineRange(for: NSRange(location: loc, length: 0))
+            let (content, terminator) = splitTerminator(ns.substring(with: lineRange))
+            rebuilt += transform(content) + terminator
+            loc = NSMaxRange(lineRange)
+        }
+        if block.length == 0 {  // 空文字：仍讓 transform 作用於空行
+            rebuilt = transform("")
+        }
+
+        let newText = ns.replacingCharacters(in: block, with: rebuilt)
+        // 游標錨定到轉換後區塊起點，維持原長度但夾到新文字範圍。
         let newLength = (newText as NSString).length
-        let loc = min(lineRange.location, newLength)
-        let len = min(clamped.length, newLength - loc)
-        return FormatResult(text: newText, selection: NSRange(location: loc, length: len))
+        let loc0 = min(block.location, newLength)
+        let len = min(clamped.length, newLength - loc0)
+        return FormatResult(text: newText, selection: NSRange(location: loc0, length: len))
     }
 
     /// 拆出行內容與尾端換行（\n / \r\n / \r）。
