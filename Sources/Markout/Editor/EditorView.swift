@@ -9,10 +9,11 @@ struct EditorView: NSViewRepresentable {
     var documentURL: URL? = nil
     /// Called once with the text view, so the owner can insert text at the caret (e.g. a TOC).
     var onEditorReady: ((MarkoutTextView) -> Void)? = nil
-    /// Editor font size, editor color theme id, and soft-wrap — driven by settings.
+    /// Editor font size, editor color theme id, soft-wrap, and line numbers — driven by settings.
     var fontSize: Double = SettingsDefault.editorFontSize
     var editorThemeID: String = SettingsDefault.editorThemeID
     var softWrap: Bool = SettingsDefault.softWrap
+    var showLineNumbers: Bool = SettingsDefault.showLineNumbers
 
     private var theme: EditorTheme {
         EditorThemeStore.theme(id: editorThemeID)
@@ -31,8 +32,10 @@ struct EditorView: NSViewRepresentable {
         context.coordinator.theme = theme
         context.coordinator.fontSize = fontSize
         context.coordinator.softWrap = softWrap
+        context.coordinator.showLineNumbers = showLineNumbers
         MarkdownTextViewFactory.configure(
-            textView, in: scroll, fontSize: fontSize, theme: theme, softWrap: softWrap)
+            textView, in: scroll, fontSize: fontSize, theme: theme, softWrap: softWrap,
+            showLineNumbers: showLineNumbers)
         textView.onInsertImage = { [weak textView] image in
             guard let textView else { return }
             guard let markdown = try? ImagePasteHandler.markdownLink(
@@ -54,12 +57,15 @@ struct EditorView: NSViewRepresentable {
         let appearanceChanged = context.coordinator.fontSize != fontSize
             || context.coordinator.theme.id != theme.id
             || context.coordinator.softWrap != softWrap
+            || context.coordinator.showLineNumbers != showLineNumbers
         if appearanceChanged {
             context.coordinator.fontSize = fontSize
             context.coordinator.theme = theme
             context.coordinator.softWrap = softWrap
+            context.coordinator.showLineNumbers = showLineNumbers
             MarkdownTextViewFactory.configure(
-                textView, in: nsView, fontSize: fontSize, theme: theme, softWrap: softWrap)
+                textView, in: nsView, fontSize: fontSize, theme: theme, softWrap: softWrap,
+                showLineNumbers: showLineNumbers)
         }
 
         if textView.string != text {
@@ -80,6 +86,7 @@ struct EditorView: NSViewRepresentable {
         var theme: EditorTheme = EditorThemeStore.theme(id: SettingsDefault.editorThemeID)!
         var fontSize: Double = SettingsDefault.editorFontSize
         var softWrap: Bool = SettingsDefault.softWrap
+        var showLineNumbers: Bool = SettingsDefault.showLineNumbers
         private var lastReportedLine = -1
 
         init(text: Binding<String>, onVisibleLineChange: ((Int) -> Void)?, documentURL: URL?) {
@@ -104,6 +111,7 @@ struct EditorView: NSViewRepresentable {
             storage.beginEditing()
             SyntaxHighlighter.apply(to: storage, baseFont: font, theme: theme)
             storage.endEditing()
+            (textView.enclosingScrollView?.verticalRulerView as? LineNumberRulerView)?.refresh()
         }
 
         func observeScrolling(of scroll: NSScrollView) {

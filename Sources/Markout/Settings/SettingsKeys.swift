@@ -8,6 +8,8 @@ enum SettingsKey {
     static let previewThemeID = "previewThemeID"
     static let showWordCount = "showWordCount"
     static let softWrap = "softWrap"
+    static let showLineNumbers = "showLineNumbers"
+    static let customPreviewCSSPath = "customPreviewCSSPath"
 }
 
 /// Default values for each setting; used as the `@AppStorage` fallbacks.
@@ -17,4 +19,9 @@ enum SettingsDefault {
     static let previewThemeID = "github"
     static let showWordCount = true
     static let softWrap = true
+    static let showLineNumbers = false
+    static let customPreviewCSSPath = ""
 }
+
+/// Sentinel `previewThemeID` selecting the user's custom CSS file (see `customPreviewCSSPath`).
+let customPreviewThemeID = "custom"
