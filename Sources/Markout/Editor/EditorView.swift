@@ -107,7 +107,10 @@ struct EditorView: NSViewRepresentable {
 
         func rehighlight() {
             guard let textView, let storage = textView.textStorage else { return }
-            let font = textView.font ?? NSFont.monospacedSystemFont(ofSize: CGFloat(fontSize), weight: .regular)
+            // Derive the base font from the settings-driven `fontSize`, NOT from `textView.font`:
+            // that getter reflects the first character's font, which the highlighter enlarges for
+            // a leading heading — reading it back would compound the size on every keystroke.
+            let font = NSFont.monospacedSystemFont(ofSize: CGFloat(fontSize), weight: .regular)
             storage.beginEditing()
             SyntaxHighlighter.apply(to: storage, baseFont: font, theme: theme)
             storage.endEditing()
