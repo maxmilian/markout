@@ -18,17 +18,17 @@ CSS authored in this repo (not vendored):
 
 ## Fetching the JS/CSS engines
 
-> The CI/sandbox environment that generated this scaffold has **no outbound network access to
-> CDNs**, so `highlight.min.js`, `katex.min.js`, `katex.min.css`, the KaTeX `fonts/`, and
-> `mermaid.min.js` are **not committed**. Run `./fetch-assets.sh` on a machine with network access
-> (e.g. your Mac) once; the files then live in the bundle and never need re-fetching.
+The pinned `highlight.min.js`, `katex.min.js`, `katex.min.css`, the KaTeX `fonts/`, and
+`mermaid.min.js` are **committed to the repo** so the app builds offline with no extra steps.
+To re-fetch or bump versions, edit the pins in `fetch-assets.sh` and run it on a machine with
+network access:
 
 ```sh
 cd Resources/PreviewAssets && ./fetch-assets.sh
 ```
 
-After fetching, `xcodegen generate` and build — `project.yml` already copies the whole
-`Resources/PreviewAssets` folder into `Markout.app/Contents/Resources`.
+`project.yml` copies the whole `Resources/PreviewAssets` folder (as a folder reference, preserving
+structure) into `Markout.app/Contents/Resources/PreviewAssets`.
 
 ## Notes
 
