@@ -10,6 +10,8 @@ enum SettingsKey {
     static let softWrap = "softWrap"
     static let showLineNumbers = "showLineNumbers"
     static let customPreviewCSSPath = "customPreviewCSSPath"
+    static let editorAppearance = "editorAppearance"
+    static let previewAppearance = "previewAppearance"
 }
 
 /// Default values for each setting; used as the `@AppStorage` fallbacks.
@@ -21,6 +23,8 @@ enum SettingsDefault {
     static let softWrap = true
     static let showLineNumbers = false
     static let customPreviewCSSPath = ""
+    static let editorAppearance = "system"
+    static let previewAppearance = "system"
 }
 
 /// Sentinel `previewThemeID` selecting the user's custom CSS file (see `customPreviewCSSPath`).
