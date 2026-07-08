@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/hero-dark.svg">
+  <img alt="Markout — a modern, native macOS Markdown editor" src="assets/hero-light.svg">
+</picture>
+
 # Markout
 
 A modern, native macOS Markdown editor for Apple Silicon — the spiritual successor to the unmaintained [MacDown](https://github.com/MacDownApp/macdown).
