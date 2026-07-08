@@ -9,6 +9,15 @@ struct EditorView: NSViewRepresentable {
     var documentURL: URL? = nil
     /// Called once with the text view, so the owner can insert text at the caret (e.g. a TOC).
     var onEditorReady: ((MarkoutTextView) -> Void)? = nil
+    /// Editor font size, editor color theme id, and soft-wrap — driven by settings.
+    var fontSize: Double = SettingsDefault.editorFontSize
+    var editorThemeID: String = SettingsDefault.editorThemeID
+    var softWrap: Bool = SettingsDefault.softWrap
+
+    private var theme: EditorTheme {
+        EditorThemeStore.theme(id: editorThemeID)
+            ?? EditorThemeStore.theme(id: SettingsDefault.editorThemeID)!
+    }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(text: $text, onVisibleLineChange: onVisibleLineChange, documentURL: documentURL)
@@ -19,6 +28,11 @@ struct EditorView: NSViewRepresentable {
         textView.delegate = context.coordinator
         textView.string = text
         context.coordinator.textView = textView
+        context.coordinator.theme = theme
+        context.coordinator.fontSize = fontSize
+        context.coordinator.softWrap = softWrap
+        MarkdownTextViewFactory.configure(
+            textView, in: scroll, fontSize: fontSize, theme: theme, softWrap: softWrap)
         textView.onInsertImage = { [weak textView] image in
             guard let textView else { return }
             guard let markdown = try? ImagePasteHandler.markdownLink(
@@ -36,10 +50,24 @@ struct EditorView: NSViewRepresentable {
         context.coordinator.onVisibleLineChange = onVisibleLineChange
         context.coordinator.documentURL = documentURL
         guard let textView = context.coordinator.textView else { return }
+
+        let appearanceChanged = context.coordinator.fontSize != fontSize
+            || context.coordinator.theme.id != theme.id
+            || context.coordinator.softWrap != softWrap
+        if appearanceChanged {
+            context.coordinator.fontSize = fontSize
+            context.coordinator.theme = theme
+            context.coordinator.softWrap = softWrap
+            MarkdownTextViewFactory.configure(
+                textView, in: nsView, fontSize: fontSize, theme: theme, softWrap: softWrap)
+        }
+
         if textView.string != text {
             let selected = textView.selectedRanges
             textView.string = text
             textView.selectedRanges = selected
+            context.coordinator.rehighlight()
+        } else if appearanceChanged {
             context.coordinator.rehighlight()
         }
     }
@@ -49,6 +77,9 @@ struct EditorView: NSViewRepresentable {
         var onVisibleLineChange: ((Int) -> Void)?
         var documentURL: URL?
         weak var textView: MarkoutTextView?
+        var theme: EditorTheme = EditorThemeStore.theme(id: SettingsDefault.editorThemeID)!
+        var fontSize: Double = SettingsDefault.editorFontSize
+        var softWrap: Bool = SettingsDefault.softWrap
         private var lastReportedLine = -1
 
         init(text: Binding<String>, onVisibleLineChange: ((Int) -> Void)?, documentURL: URL?) {
@@ -69,10 +100,9 @@ struct EditorView: NSViewRepresentable {
 
         func rehighlight() {
             guard let textView, let storage = textView.textStorage else { return }
-            let color = NSColor.textColor
-            let font = textView.font ?? NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
+            let font = textView.font ?? NSFont.monospacedSystemFont(ofSize: CGFloat(fontSize), weight: .regular)
             storage.beginEditing()
-            SyntaxHighlighter.apply(to: storage, baseFont: font, textColor: color)
+            SyntaxHighlighter.apply(to: storage, baseFont: font, theme: theme)
             storage.endEditing()
         }
 

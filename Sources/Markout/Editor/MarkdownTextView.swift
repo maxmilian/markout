@@ -132,4 +132,32 @@ enum MarkdownTextViewFactory {
         scroll.documentView = textView
         return (scroll, textView)
     }
+
+    /// Applies settings-driven appearance: font size, editor theme colors, and soft-wrap.
+    /// Called at creation and whenever the bound settings change.
+    static func configure(_ textView: MarkoutTextView, in scroll: NSScrollView,
+                          fontSize: Double, theme: EditorTheme, softWrap: Bool) {
+        textView.font = NSFont.monospacedSystemFont(ofSize: CGFloat(fontSize), weight: .regular)
+        textView.backgroundColor = theme.background
+        textView.drawsBackground = true
+        textView.insertionPointColor = theme.caret
+        textView.selectedTextAttributes = [.backgroundColor: theme.selection]
+
+        guard let container = textView.textContainer else { return }
+        if softWrap {
+            container.widthTracksTextView = true
+            container.containerSize = NSSize(
+                width: scroll.contentSize.width, height: CGFloat.greatestFiniteMagnitude)
+            textView.isHorizontallyResizable = false
+            textView.autoresizingMask = [.width]
+            scroll.hasHorizontalScroller = false
+        } else {
+            container.widthTracksTextView = false
+            container.containerSize = NSSize(
+                width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+            textView.isHorizontallyResizable = true
+            textView.autoresizingMask = [.width, .height]
+            scroll.hasHorizontalScroller = true
+        }
+    }
 }
