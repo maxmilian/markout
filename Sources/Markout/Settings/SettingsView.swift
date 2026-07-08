@@ -84,7 +84,7 @@ private struct PreviewSettingsTab: View {
 
     private func chooseCustomCSS() {
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.init(filenameExtension: "css")!]
+        panel.allowedContentTypes = [UTType(filenameExtension: "css") ?? .plainText]
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         guard panel.runModal() == .OK, let url = panel.url else { return }

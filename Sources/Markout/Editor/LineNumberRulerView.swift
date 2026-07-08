@@ -40,41 +40,65 @@ final class LineNumberRulerView: NSRulerView {
             .foregroundColor: NSColor.secondaryLabelColor,
         ]
 
+        func drawNumber(_ number: Int, atY y: CGFloat, height: CGFloat) {
+            let label = "\(number)" as NSString
+            let size = label.size(withAttributes: attrs)
+            let drawY = y + inset + yOffset + (height - size.height) / 2
+            label.draw(at: NSPoint(x: thickness - size.width - 5, y: drawY), withAttributes: attrs)
+        }
+
         // Restrict work to the glyphs currently visible.
         let visibleGlyphs = layoutManager.glyphRange(forBoundingRect: textView.visibleRect, in: container)
         let visibleChars = layoutManager.characterRange(forGlyphRange: visibleGlyphs, actualGlyphRange: nil)
+        let visibleEnd = NSMaxRange(visibleChars)
 
-        // Line number of the first visible character.
-        var lineNumber = 1
-        content.enumerateSubstrings(
-            in: NSRange(location: 0, length: visibleChars.location),
-            options: [.byLines, .substringNotRequired]) { _, _, _, _ in lineNumber += 1 }
+        // Normalize to the start of the logical line containing the first visible character —
+        // otherwise a soft-wrapped continuation at the top would offset every number by one.
+        let firstLineStart = content.lineRange(
+            for: NSRange(location: min(visibleChars.location, content.length), length: 0)).location
+        var lineNumber = Self.lineNumber(atCharacterIndex: firstLineStart, in: content)
 
-        // Draw one number per logical line, at its first fragment's top.
-        content.enumerateSubstrings(in: visibleChars, options: [.byLines, .substringNotRequired]) {
-            _, lineRange, _, _ in
+        // Draw one number per logical line, at its first fragment's top, over the visible range only.
+        var lineStart = firstLineStart
+        while lineStart < content.length && lineStart <= visibleEnd {
+            let lineRange = content.lineRange(for: NSRange(location: lineStart, length: 0))
             let glyphIndex = layoutManager.glyphIndexForCharacter(at: lineRange.location)
             let fragment = layoutManager.lineFragmentRect(forGlyphAt: glyphIndex, effectiveRange: nil)
-            let label = "\(lineNumber)" as NSString
-            let size = label.size(withAttributes: attrs)
-            let y = fragment.minY + inset + yOffset + (fragment.height - size.height) / 2
-            label.draw(at: NSPoint(x: thickness - size.width - 5, y: y), withAttributes: attrs)
+            drawNumber(lineNumber, atY: fragment.minY, height: fragment.height)
             lineNumber += 1
+            let next = NSMaxRange(lineRange)
+            if next == lineStart { break }  // no progress guard
+            lineStart = next
         }
 
-        // A trailing empty line (text ending in "\n") gets its own number.
-        if visibleChars.location + visibleChars.length >= content.length,
-           content.length == 0 || content.hasSuffix("\n") {
-            let glyphIndex = max(0, layoutManager.numberOfGlyphs - 1)
-            let fragment = layoutManager.numberOfGlyphs == 0
-                ? NSRect(x: 0, y: 0, width: 0, height: textView.font?.pointSize ?? 13)
-                : layoutManager.lineFragmentRect(forGlyphAt: glyphIndex, effectiveRange: nil)
-            let extraY = (content.length == 0 ? 0 : fragment.maxY)
-            let label = "\(lineNumber)" as NSString
-            let size = label.size(withAttributes: attrs)
-            label.draw(at: NSPoint(x: thickness - size.width - 5,
-                                   y: extraY + inset + yOffset), withAttributes: attrs)
+        // A trailing empty line (empty doc, or text ending in "\n") gets its own number.
+        if visibleEnd >= content.length, content.length == 0 || content.hasSuffix("\n") {
+            if content.length == 0 {
+                drawNumber(lineNumber, atY: 0, height: textView.font?.pointSize ?? 13)
+            } else {
+                let lastGlyph = max(0, layoutManager.numberOfGlyphs - 1)
+                let fragment = layoutManager.lineFragmentRect(forGlyphAt: lastGlyph, effectiveRange: nil)
+                drawNumber(lineNumber, atY: fragment.maxY, height: fragment.height)
+            }
         }
+    }
+
+    /// 1-based line number of the logical line containing `index` = (line terminators before it) + 1.
+    /// Counts `\n`, `\r`, and `\r\n` so it is correct for any index, not just line starts.
+    static func lineNumber(atCharacterIndex index: Int, in content: NSString) -> Int {
+        let bound = min(max(index, 0), content.length)
+        var number = 1
+        var i = 0
+        while i < bound {
+            let c = content.character(at: i)
+            if c == 0x0A {  // \n
+                number += 1
+            } else if c == 0x0D {  // \r not immediately followed by \n
+                if i + 1 >= content.length || content.character(at: i + 1) != 0x0A { number += 1 }
+            }
+            i += 1
+        }
+        return number
     }
 
     private func labelFont(for textView: NSTextView) -> NSFont {
