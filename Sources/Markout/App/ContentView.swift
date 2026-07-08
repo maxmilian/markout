@@ -16,7 +16,8 @@ struct ContentView: View {
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage(SettingsKey.previewThemeID) private var previewThemeID = SettingsDefault.previewThemeID
     @AppStorage(SettingsKey.editorFontSize) private var editorFontSize = SettingsDefault.editorFontSize
-    @AppStorage(SettingsKey.editorThemeID) private var editorThemeID = SettingsDefault.editorThemeID
+    @AppStorage(SettingsKey.editorAppearance) private var editorAppearance = SettingsDefault.editorAppearance
+    @AppStorage(SettingsKey.previewAppearance) private var previewAppearance = SettingsDefault.previewAppearance
     @AppStorage(SettingsKey.softWrap) private var softWrap = SettingsDefault.softWrap
     @AppStorage(SettingsKey.showWordCount) private var showWordCount = SettingsDefault.showWordCount
     @AppStorage(SettingsKey.showLineNumbers) private var showLineNumbers = SettingsDefault.showLineNumbers
@@ -28,15 +29,45 @@ struct ContentView: View {
     @State private var previewScrollLine: Int?
     @State private var showContents = false
 
+    /// A toolbar menu offering System / Light / Dark for one pane. `glyph` distinguishes the
+    /// editor menu from the preview menu; the checkmark in the menu shows the current mode.
+    private func appearanceMenu(title: String, glyph: String, selection: Binding<String>) -> some View {
+        Menu {
+            Picker(title, selection: selection) {
+                Label("System", systemImage: "circle.lefthalf.filled").tag(AppearanceMode.system.rawValue)
+                Label("Light", systemImage: "sun.max").tag(AppearanceMode.light.rawValue)
+                Label("Dark", systemImage: "moon").tag(AppearanceMode.dark.rawValue)
+            }
+            .pickerStyle(.inline)
+        } label: {
+            Label(title, systemImage: glyph)
+        }
+        .help(title)
+    }
+
     private var activeTheme: PreviewTheme {
         if previewThemeID == customPreviewThemeID, !customPreviewCSSPath.isEmpty,
            let custom = PreviewThemeStore.custom(
-               fromFileURL: URL(fileURLWithPath: customPreviewCSSPath)) {
+            fromFileURL: URL(fileURLWithPath: customPreviewCSSPath)) {
             return custom
         }
         return PreviewThemeStore.theme(id: previewThemeID)
             ?? PreviewThemeStore.theme(id: "default")
             ?? PreviewTheme(id: "default", name: "Default", css: HTMLTemplate.css)
+    }
+
+    private var systemIsDark: Bool { colorScheme == .dark }
+
+    private var editorIsDark: Bool {
+        AppearanceResolver.isDark(
+            mode: AppearanceMode(rawValue: editorAppearance) ?? .system,
+            systemIsDark: systemIsDark)
+    }
+
+    private var previewIsDark: Bool {
+        AppearanceResolver.isDark(
+            mode: AppearanceMode(rawValue: previewAppearance) ?? .system,
+            systemIsDark: systemIsDark)
     }
 
     var body: some View {
@@ -52,14 +83,14 @@ struct ContentView: View {
                     documentURL: documentURL,
                     onEditorReady: { bridge.textView = $0 },
                     fontSize: editorFontSize,
-                    editorThemeID: editorThemeID,
+                    editorThemeID: AppearanceResolver.editorThemeID(isDark: editorIsDark),
                     softWrap: softWrap,
                     showLineNumbers: showLineNumbers
                 )
                 .frame(minWidth: 320)
                 PreviewView(
                     htmlBody: renderedHTML,
-                    isDark: colorScheme == .dark,
+                    isDark: previewIsDark,
                     previewCSS: activeTheme.css,
                     scrollLine: previewScrollLine,
                     onWebViewReady: { bridge.webView = $0 }
@@ -96,15 +127,14 @@ struct ContentView: View {
                     .help("Link (⌘K)")
             }
             ToolbarItem(placement: .automatic) {
-                Picker("Preview Theme", selection: $previewThemeID) {
-                    ForEach(PreviewThemeStore.bundled) { theme in
-                        Text(theme.name).tag(theme.id)
-                    }
-                    if !customPreviewCSSPath.isEmpty {
-                        Text("Custom").tag(customPreviewThemeID)
-                    }
-                }
-                .pickerStyle(.menu)
+                appearanceMenu(
+                    title: "Editor appearance", glyph: "square.lefthalf.filled",
+                    selection: $editorAppearance)
+            }
+            ToolbarItem(placement: .automatic) {
+                appearanceMenu(
+                    title: "Preview appearance", glyph: "eye",
+                    selection: $previewAppearance)
             }
         }
         .focusedSceneValue(\.documentActions, DocumentActions(
