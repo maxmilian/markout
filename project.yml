@@ -26,6 +26,8 @@ targets:
         buildPhase: resources
       - path: Resources/Assets.xcassets
         buildPhase: resources
+      - path: Resources/markout
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: tech.ankey.Markout
