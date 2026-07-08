@@ -22,6 +22,7 @@ targets:
       - path: Sources/Markout/Render/default.css
         buildPhase: resources
       - path: Resources/PreviewAssets
+        type: folder
         buildPhase: resources
     settings:
       base:

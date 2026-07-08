@@ -105,14 +105,14 @@ enum MarkdownTextViewFactory {
         let layoutManager = NSLayoutManager()
         storage.addLayoutManager(layoutManager)
         let container = NSTextContainer(
-            containerSize: NSSize(width: contentSize.width, height: .greatestFiniteMagnitude))
+            containerSize: NSSize(width: contentSize.width, height: CGFloat.greatestFiniteMagnitude))
         container.widthTracksTextView = true
         layoutManager.addTextContainer(container)
 
         let textView = MarkoutTextView(
             frame: NSRect(origin: .zero, size: contentSize), textContainer: container)
         textView.minSize = NSSize(width: 0, height: 0)
-        textView.maxSize = NSSize(width: .greatestFiniteMagnitude, height: .greatestFiniteMagnitude)
+        textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         textView.isVerticallyResizable = true
         textView.isHorizontallyResizable = false
         textView.autoresizingMask = [.width]
