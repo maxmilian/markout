@@ -3,18 +3,43 @@ import SwiftUI
 struct ContentView: View {
     @Binding var document: MarkdownDocument
     @Environment(\.colorScheme) private var colorScheme
+    @AppStorage("previewThemeID") private var previewThemeID = "github"
 
     @State private var renderedHTML: String = ""
     @State private var debounceTask: Task<Void, Never>?
+    @State private var previewScrollLine: Int?
+
+    private var activeTheme: PreviewTheme {
+        PreviewThemeStore.theme(id: previewThemeID)
+            ?? PreviewThemeStore.theme(id: "default")
+            ?? PreviewTheme(id: "default", name: "Default", css: HTMLTemplate.css)
+    }
 
     var body: some View {
         HSplitView {
-            EditorView(text: $document.text)
-                .frame(minWidth: 320)
-            PreviewView(htmlBody: renderedHTML, isDark: colorScheme == .dark)
-                .frame(minWidth: 320)
+            EditorView(text: $document.text, onVisibleLineChange: { line in
+                previewScrollLine = line
+            })
+            .frame(minWidth: 320)
+            PreviewView(
+                htmlBody: renderedHTML,
+                isDark: colorScheme == .dark,
+                previewCSS: activeTheme.css,
+                scrollLine: previewScrollLine
+            )
+            .frame(minWidth: 320)
         }
         .frame(minWidth: 800, minHeight: 500)
+        .toolbar {
+            ToolbarItem(placement: .automatic) {
+                Picker("Preview Theme", selection: $previewThemeID) {
+                    ForEach(PreviewThemeStore.bundled) { theme in
+                        Text(theme.name).tag(theme.id)
+                    }
+                }
+                .pickerStyle(.menu)
+            }
+        }
         .onAppear { render(document.text) }
         .onChange(of: document.text) { _, newValue in
             scheduleRender(newValue)
@@ -30,7 +55,10 @@ struct ContentView: View {
         }
     }
 
+    /// P2 pipeline: protect math → render GFM (with source positions) → reinsert math for KaTeX.
     private func render(_ markdown: String) {
-        renderedHTML = MarkdownRenderer.renderHTMLBody(markdown)
+        let (protected, spans) = MathExtractor.extract(markdown)
+        let raw = MarkdownRenderer.renderHTMLBody(protected, options: .init(sourcePositions: true))
+        renderedHTML = MathExtractor.reinsert(raw, spans: spans)
     }
 }
