@@ -20,9 +20,15 @@ Built with SwiftUI + TextKit + WKWebView. Everything runs **offline** — the sy
 
 ## Download
 
-**[⬇ Download the latest release](https://github.com/maxmilian/markout/releases/latest)** — grab the `.dmg`, or [build from source](#building).
+### Homebrew
 
-### Install
+```sh
+brew install --cask maxmilian/tap/markout
+```
+
+### Or download the `.dmg`
+
+**[⬇ Download the latest release](https://github.com/maxmilian/markout/releases/latest)** — or [build from source](#building).
 
 1. Open the downloaded `Markout-*.dmg` and drag **Markout** into your **Applications** folder.
 2. First launch only: right-click **Markout.app** → **Open** → **Open**.

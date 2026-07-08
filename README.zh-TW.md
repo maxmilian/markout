@@ -20,9 +20,15 @@ Markout 是一款現代、原生的 Apple Silicon macOS Markdown 編輯器，也
 
 ## 下載
 
-**[⬇ 下載最新版本](https://github.com/maxmilian/markout/releases/latest)** — 取得 `.dmg`，或[從原始碼建置](#建置)。
+### Homebrew
 
-### 安裝
+```sh
+brew install --cask maxmilian/tap/markout
+```
+
+### 或下載 `.dmg`
+
+**[⬇ 下載最新版本](https://github.com/maxmilian/markout/releases/latest)** — 或[從原始碼建置](#建置)。
 
 1. 開啟下載的 `Markout-*.dmg`，將 **Markout** 拖進**應用程式**資料夾。
 2. 首次開啟：在 **Markout.app** 上按右鍵 →「**打開**」→「**打開**」。
