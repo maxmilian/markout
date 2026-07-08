@@ -7,11 +7,33 @@
 
 # Markout
 
+[![Latest release](https://img.shields.io/github/v/release/maxmilian/markout?sort=semver)](https://github.com/maxmilian/markout/releases/latest)
+[![CI](https://github.com/maxmilian/markout/actions/workflows/ci.yml/badge.svg)](https://github.com/maxmilian/markout/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![Platform: macOS 14+](https://img.shields.io/badge/macOS-14%2B-black?logo=apple)
+
 Markout은 Apple Silicon을 위한 현대적인 네이티브 macOS Markdown 에디터입니다. 더 이상 유지보수되지 않는 [MacDown](https://github.com/MacDownApp/macdown)의 정신적 후속작을 목표로 합니다.
 
 SwiftUI + TextKit + WKWebView로 만들어졌습니다. 문법, 수식, 다이어그램 엔진은 vendored 되어 있으며 모든 렌더링은 **오프라인** 으로 동작합니다. CDN에 의존하지 않습니다. MIT 라이선스입니다.
 
 ![Markout editing a document with live preview](assets/screenshot.png)
+
+## 다운로드
+
+**[⬇ 최신 릴리스 다운로드](https://github.com/maxmilian/markout/releases/latest)** — `.dmg`를 받거나 [소스에서 빌드](#building)하세요.
+
+### 설치
+
+1. 내려받은 `Markout-*.dmg`를 열고 **Markout**을 **응용 프로그램** 폴더로 드래그합니다.
+2. 최초 실행 시에만: **Markout.app**을 우클릭 → **열기** → **열기**.
+
+Markout은 애드혹 서명되었지만 Apple 공증을 받지 않았으므로 최초 실행 시 macOS가 Gatekeeper 경고를 표시합니다. 우클릭 → 열기로 macOS가 신뢰하게 만듭니다. 더블클릭으로 열리지 않으면 터미널에서 한 번 실행해 격리 속성을 제거하세요:
+
+```sh
+xattr -cr /Applications/Markout.app
+```
+
+macOS 14 이상이 필요합니다(Apple Silicon 권장).
 
 ## Why Markout
 
@@ -121,6 +143,10 @@ pull request를 열기 전에:
 4. 사용자에게 보이는 동작이 바뀌면 README 또는 localized README를 업데이트하세요.
 
 전체 가이드는 [CONTRIBUTING.md](CONTRIBUTING.md)를 참고하세요.
+
+## Acknowledgements
+
+Markout은 오랫동안 사용해 온 Markdown 에디터 [MacDown](https://github.com/MacDownApp/macdown)에 큰 빚을 지고 있습니다. MacDown은 더 이상 유지보수되지 않기에, Markout은 현대적인 Apple Silicon macOS를 위해 완전히 네이티브로 새로 만들었으며 동일한 빠르고 플레인 텍스트 중심의 오프라인 정신을 이어갑니다. MacDown 제작자분들께 감사드립니다.
 
 ## License
 

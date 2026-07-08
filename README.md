@@ -7,11 +7,33 @@ English · [繁體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md) ·
 
 # Markout
 
+[![Latest release](https://img.shields.io/github/v/release/maxmilian/markout?sort=semver)](https://github.com/maxmilian/markout/releases/latest)
+[![CI](https://github.com/maxmilian/markout/actions/workflows/ci.yml/badge.svg)](https://github.com/maxmilian/markout/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![Platform: macOS 14+](https://img.shields.io/badge/macOS-14%2B-black?logo=apple)
+
 A modern, native macOS Markdown editor for Apple Silicon — the spiritual successor to the unmaintained [MacDown](https://github.com/MacDownApp/macdown).
 
 Built with SwiftUI + TextKit + WKWebView. Everything runs **offline** — the syntax, math, and diagram engines are vendored, no CDN. MIT licensed.
 
 ![Markout editing a document with live preview](assets/screenshot.png)
+
+## Download
+
+**[⬇ Download the latest release](https://github.com/maxmilian/markout/releases/latest)** — grab the `.dmg`, or [build from source](#building).
+
+### Install
+
+1. Open the downloaded `Markout-*.dmg` and drag **Markout** into your **Applications** folder.
+2. First launch only: right-click **Markout.app** → **Open** → **Open**.
+
+Markout is ad-hoc signed but not notarized by Apple, so macOS shows a Gatekeeper warning the first time. Right-click → **Open** tells macOS to trust it. If double-clicking still refuses to open it, clear the quarantine flag once in Terminal:
+
+```sh
+xattr -cr /Applications/Markout.app
+```
+
+Requires macOS 14 or later (Apple Silicon recommended).
 
 ## Why Markout
 
@@ -121,6 +143,10 @@ Before opening a pull request:
 4. Update README or localized README files if the user-facing behavior changed.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contribution guide.
+
+## Acknowledgements
+
+Markout owes a debt to [MacDown](https://github.com/MacDownApp/macdown), the Markdown editor I relied on for years. MacDown is no longer maintained, so Markout is a fresh, fully native rebuild for modern Apple Silicon macOS — carrying that same fast, plain-text, offline spirit forward. Thank you to the MacDown authors.
 
 ## License
 

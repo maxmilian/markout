@@ -7,11 +7,33 @@
 
 # Markout
 
+[![Latest release](https://img.shields.io/github/v/release/maxmilian/markout?sort=semver)](https://github.com/maxmilian/markout/releases/latest)
+[![CI](https://github.com/maxmilian/markout/actions/workflows/ci.yml/badge.svg)](https://github.com/maxmilian/markout/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![Platform: macOS 14+](https://img.shields.io/badge/macOS-14%2B-black?logo=apple)
+
 Markout 是一款现代、原生的 Apple Silicon macOS Markdown 编辑器，也是已停止维护的 [MacDown](https://github.com/MacDownApp/macdown) 的精神续作。
 
 它使用 SwiftUI + TextKit + WKWebView 构建。所有渲染都在本机离线完成，语法、数学公式和图表引擎都随 app vendored，不依赖 CDN。项目采用 MIT 许可证。
 
 ![Markout editing a document with live preview](assets/screenshot.png)
+
+## 下载
+
+**[⬇ 下载最新版本](https://github.com/maxmilian/markout/releases/latest)** — 获取 `.dmg`，或[从源码构建](#构建)。
+
+### 安装
+
+1. 打开下载的 `Markout-*.dmg`，将 **Markout** 拖入**应用程序**文件夹。
+2. 首次打开：右键点击 **Markout.app** →「**打开**」→「**打开**」。
+
+Markout 采用 ad-hoc 签名但未经 Apple 公证，因此首次打开时 macOS 会显示 Gatekeeper 警告。右键「打开」即可让 macOS 信任它。若双击仍无法打开，在终端执行一次以清除隔离属性：
+
+```sh
+xattr -cr /Applications/Markout.app
+```
+
+需要 macOS 14 或更高版本（建议 Apple Silicon）。
 
 ## 为什么做 Markout
 
@@ -121,6 +143,10 @@ README 提供以下语言：
 4. 如果用户可见行为有变化，请更新 README 或多语言 README。
 
 完整指南见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
+## 致谢
+
+Markout 深受 [MacDown](https://github.com/MacDownApp/macdown) 的启发——那是我多年来惯用的 Markdown 编辑器。MacDown 已停止维护，因此 Markout 以完全原生的方式、为现代 Apple Silicon macOS 重新打造，延续同样快速、纯文本、离线的精神。感谢 MacDown 的作者们。
 
 ## 许可证
 
