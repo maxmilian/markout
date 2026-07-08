@@ -1,0 +1,84 @@
+name: Release
+
+# Publishes a downloadable .dmg to GitHub Releases whenever a version tag is
+# pushed. The build is ad-hoc signed (no Apple Developer account / no
+# notarization), so first launch requires the Gatekeeper bypass documented in
+# the release notes below and in the README.
+#
+#   git tag v0.1.0 && git push origin v0.1.0
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate project
+        run: xcodegen generate
+
+      - name: Run tests
+        run: |
+          xcodebuild test \
+            -project Markout.xcodeproj \
+            -scheme Markout \
+            -destination 'platform=macOS' \
+            -derivedDataPath .build/dd
+
+      - name: Build Release
+        run: |
+          xcodebuild build \
+            -project Markout.xcodeproj \
+            -scheme Markout \
+            -configuration Release \
+            -destination 'platform=macOS' \
+            -derivedDataPath .build/dd
+
+      - name: Package DMG
+        run: |
+          APP=".build/dd/Build/Products/Release/Markout.app"
+          STAGING="$(mktemp -d)"
+          cp -R "$APP" "$STAGING/"
+          ln -s /Applications "$STAGING/Applications"
+          hdiutil create -volname "Markout" \
+            -srcfolder "$STAGING" \
+            -ov -format UDZO \
+            "Markout-${GITHUB_REF_NAME}.dmg"
+
+      - name: Publish Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<'EOF'
+          ## Install
+
+          1. Download `Markout-${GITHUB_REF_NAME}.dmg` below and open it.
+          2. Drag **Markout** into your **Applications** folder.
+          3. First launch only: right-click **Markout.app** → **Open** → **Open**.
+
+          This build is ad-hoc signed (not notarized by Apple), so macOS shows a
+          Gatekeeper warning on first launch. If double-clicking still refuses to
+          open it, run this once in Terminal to clear the quarantine flag:
+
+          ```sh
+          xattr -cr /Applications/Markout.app
+          ```
+
+          Requires macOS 14 or later (Apple Silicon recommended).
+          EOF
+          # Expand ${GITHUB_REF_NAME} inside the heredoc-produced file.
+          sed -i '' "s/\${GITHUB_REF_NAME}/${GITHUB_REF_NAME}/g" notes.md
+          gh release create "${GITHUB_REF_NAME}" \
+            "Markout-${GITHUB_REF_NAME}.dmg" \
+            --title "Markout ${GITHUB_REF_NAME}" \
+            --notes-file notes.md
