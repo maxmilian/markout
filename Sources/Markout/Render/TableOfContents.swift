@@ -7,6 +7,12 @@ struct Heading: Equatable {
     let slug: String
 }
 
+/// A heading paired with its 1-based source line (for scroll-to navigation).
+struct LocatedHeading: Equatable {
+    let heading: Heading
+    let line: Int
+}
+
 /// Extracts ATX headings and builds a table of contents.
 ///
 /// Slugs follow the GitHub/cmark scheme (lowercase, punctuation dropped, whitespace → `-`,
@@ -14,12 +20,17 @@ struct Heading: Equatable {
 /// Pure; headings inside fenced code are ignored.
 enum TableOfContents {
     static func headings(in markdown: String) -> [Heading] {
-        var result: [Heading] = []
+        located(in: markdown).map(\.heading)
+    }
+
+    /// Headings with their 1-based source line numbers.
+    static func located(in markdown: String) -> [LocatedHeading] {
+        var result: [LocatedHeading] = []
         var seen: [String: Int] = [:]
         var inFence = false
         var fenceMarker: Character = "`"
 
-        for rawLine in markdown.components(separatedBy: "\n") {
+        for (index, rawLine) in markdown.components(separatedBy: "\n").enumerated() {
             let trimmed = rawLine.trimmingCharacters(in: .whitespaces)
 
             // Track fenced code blocks.
@@ -45,7 +56,8 @@ enum TableOfContents {
                 seen[base] = 1
                 uniqueSlug = base
             }
-            result.append(Heading(level: heading.level, text: heading.text, slug: uniqueSlug))
+            let full = Heading(level: heading.level, text: heading.text, slug: uniqueSlug)
+            result.append(LocatedHeading(heading: full, line: index + 1))
         }
         return result
     }

@@ -6,7 +6,7 @@ struct MarkoutApp: App {
 
     var body: some Scene {
         DocumentGroup(newDocument: MarkdownDocument()) { file in
-            ContentView(document: file.$document)
+            ContentView(document: file.$document, documentURL: file.fileURL)
         }
         .commands {
             CommandGroup(after: .saveItem) {

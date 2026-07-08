@@ -20,6 +20,8 @@ struct PreviewView: NSViewRepresentable {
     var previewCSS: String = HTMLTemplate.css
     /// When set, scroll the preview so the block at this 1-based source line is at the top.
     var scrollLine: Int? = nil
+    /// Called once with the underlying WebView, so the owner can drive PDF export.
+    var onWebViewReady: ((WKWebView) -> Void)? = nil
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -27,6 +29,7 @@ struct PreviewView: NSViewRepresentable {
         let webView = WKWebView()
         webView.setValue(false, forKey: "drawsBackground")
         webView.navigationDelegate = context.coordinator
+        onWebViewReady?(webView)
         context.coordinator.configure(body: htmlBody, isDark: isDark, css: previewCSS)
         webView.loadHTMLString(
             HTMLTemplate.page(theme: isDark ? .dark : .light, previewCSS: previewCSS),

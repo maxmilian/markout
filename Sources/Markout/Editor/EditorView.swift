@@ -7,6 +7,8 @@ struct EditorView: NSViewRepresentable {
     var onVisibleLineChange: ((Int) -> Void)? = nil
     /// The document's file URL, used to save pasted/dropped images beside it.
     var documentURL: URL? = nil
+    /// Called once with the text view, so the owner can insert text at the caret (e.g. a TOC).
+    var onEditorReady: ((MarkoutTextView) -> Void)? = nil
 
     func makeCoordinator() -> Coordinator {
         Coordinator(text: $text, onVisibleLineChange: onVisibleLineChange, documentURL: documentURL)
@@ -26,6 +28,7 @@ struct EditorView: NSViewRepresentable {
         }
         context.coordinator.rehighlight()
         context.coordinator.observeScrolling(of: scroll)
+        onEditorReady?(textView)
         return scroll
     }
 
