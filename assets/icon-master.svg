@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="ground" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5b53e6"/>
+      <stop offset="1" stop-color="#7c3aed"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.16"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="squircle">
+      <rect x="100" y="100" width="824" height="824" rx="184" ry="184"/>
+    </clipPath>
+  </defs>
+
+  <!-- rounded-rect ground with a soft top sheen -->
+  <g clip-path="url(#squircle)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#ground)"/>
+    <rect x="100" y="100" width="824" height="470" fill="url(#sheen)"/>
+  </g>
+
+  <!-- Markdown mark: bold M + downward triangle, centered as one lockup -->
+  <path d="M264 669 L264 355 L416 531 L568 355 L568 669"
+        fill="none" stroke="#ffffff" stroke-width="70"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M614 402 L760 402 L687 622 Z" fill="#ffffff"/>
+</svg>
