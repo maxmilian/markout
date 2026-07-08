@@ -1,6 +1,6 @@
 import AppKit
 
-enum MarkdownToken {
+enum MarkdownToken: Hashable {
     case heading, emphasis, strong, inlineCode, codeBlock, link, blockquote, listMarker
 }
 
