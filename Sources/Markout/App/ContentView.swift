@@ -23,7 +23,7 @@ struct ContentView: View {
 
     private func scheduleRender(_ markdown: String) {
         debounceTask?.cancel()
-        debounceTask = Task {
+        debounceTask = Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(150))
             if Task.isCancelled { return }
             render(markdown)
