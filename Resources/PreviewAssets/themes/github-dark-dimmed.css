@@ -1,0 +1,52 @@
+/* Markout preview theme: GitHub Dark Dimmed (single dark palette, ignores data-theme). */
+:root { color-scheme: dark; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  line-height: 1.6;
+  margin: 0;
+  padding: 24px 32px;
+  color: #adbac7;
+  background: #22272e;
+  -webkit-text-size-adjust: 100%;
+}
+#content { max-width: 900px; margin: 0 auto; }
+
+h1, h2, h3, h4, h5, h6 { font-weight: 600; line-height: 1.25; margin-top: 1.5em; margin-bottom: .6em; color: #cdd9e5; }
+h1 { font-size: 2em; }
+h2 { font-size: 1.5em; }
+h1, h2 { border-bottom: 1px solid #444c56; padding-bottom: .3em; }
+
+p, ul, ol, table, pre, blockquote { margin-top: 0; margin-bottom: 1em; }
+
+code {
+  font-family: "SF Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: rgba(99,110,123,.4);
+  padding: .2em .4em; border-radius: 6px; font-size: 85%;
+}
+pre { background: #2d333b; padding: 16px; border-radius: 6px; overflow: auto; }
+pre code { background: transparent; padding: 0; font-size: 85%; }
+
+table { border-collapse: collapse; display: block; overflow: auto; }
+th, td { border: 1px solid #444c56; padding: 6px 13px; }
+th { font-weight: 600; }
+tr:nth-child(2n) { background: #2d333b; }
+
+blockquote { color: #768390; border-left: .25em solid #444c56; padding: 0 1em; margin-left: 0; }
+
+a { color: #539bf5; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+img { max-width: 100%; }
+hr { border: none; border-top: 1px solid #444c56; margin: 1.5em 0; }
+
+ul.contains-task-list { list-style: none; padding-left: 1em; }
+.task-list-item input { margin-right: .4em; }
+.math-display { display: block; text-align: center; margin: 1em 0; overflow-x: auto; }
+.math-inline { white-space: nowrap; }
+.mermaid { text-align: center; margin: 1em 0; }
+.markout-error {
+  color: #ff938a; background: rgba(255,147,138,.1);
+  border: 1px solid rgba(255,147,138,.3); border-radius: 6px;
+  padding: 8px 12px; font-family: ui-monospace, monospace; font-size: 85%;
+  white-space: pre-wrap;
+}

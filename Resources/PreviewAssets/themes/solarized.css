@@ -1,0 +1,57 @@
+/* Markout preview theme: Solarized (light + dark via data-theme). */
+:root { color-scheme: light dark; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  line-height: 1.7;
+  margin: 0;
+  padding: 24px 32px;
+  color: #657b83;
+  background: #fdf6e3;
+  -webkit-text-size-adjust: 100%;
+}
+[data-theme="dark"] body { color: #839496; background: #002b36; }
+#content { max-width: 860px; margin: 0 auto; }
+
+h1, h2, h3, h4, h5, h6 { font-weight: 600; line-height: 1.25; margin-top: 1.5em; margin-bottom: .6em; color: #586e75; }
+[data-theme="dark"] h1, [data-theme="dark"] h2, [data-theme="dark"] h3,
+[data-theme="dark"] h4, [data-theme="dark"] h5, [data-theme="dark"] h6 { color: #93a1a1; }
+h1 { font-size: 2em; }
+h2 { font-size: 1.5em; }
+h1, h2 { border-bottom: 1px solid #eee8d5; padding-bottom: .3em; }
+[data-theme="dark"] h1, [data-theme="dark"] h2 { border-color: #073642; }
+
+p, ul, ol, table, pre, blockquote { margin-top: 0; margin-bottom: 1em; }
+
+code {
+  font-family: "SF Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: #eee8d5; padding: .2em .4em; border-radius: 6px; font-size: 85%;
+}
+pre { background: #eee8d5; padding: 16px; border-radius: 6px; overflow: auto; }
+pre code { background: transparent; padding: 0; font-size: 85%; }
+[data-theme="dark"] code, [data-theme="dark"] pre { background: #073642; }
+
+table { border-collapse: collapse; display: block; overflow: auto; }
+th, td { border: 1px solid #eee8d5; padding: 6px 13px; }
+[data-theme="dark"] th, [data-theme="dark"] td { border-color: #073642; }
+
+blockquote { color: #93a1a1; border-left: .25em solid #eee8d5; padding: 0 1em; margin-left: 0; }
+[data-theme="dark"] blockquote { border-color: #073642; }
+
+a { color: #268bd2; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+img { max-width: 100%; }
+hr { border: none; border-top: 1px solid #eee8d5; margin: 1.5em 0; }
+[data-theme="dark"] hr { border-color: #073642; }
+
+ul.contains-task-list { list-style: none; padding-left: 1em; }
+.task-list-item input { margin-right: .4em; }
+.math-display { display: block; text-align: center; margin: 1em 0; overflow-x: auto; }
+.math-inline { white-space: nowrap; }
+.mermaid { text-align: center; margin: 1em 0; }
+.markout-error {
+  color: #dc322f; background: rgba(220,50,47,.08);
+  border: 1px solid rgba(220,50,47,.3); border-radius: 6px;
+  padding: 8px 12px; font-family: ui-monospace, monospace; font-size: 85%;
+  white-space: pre-wrap;
+}

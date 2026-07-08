@@ -1,0 +1,14 @@
+/* Minimal GitHub-light syntax theme for highlight.js (used with highlight.min.js).
+   Full upstream themes may be substituted; see ../VERSIONS.md. */
+.hljs { color: #1f2328; background: transparent; }
+.hljs-comment, .hljs-quote { color: #6e7781; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-type { color: #cf222e; }
+.hljs-string, .hljs-attr, .hljs-template-tag, .hljs-addition { color: #0a3069; }
+.hljs-title, .hljs-title.function_, .hljs-section { color: #8250df; }
+.hljs-number, .hljs-literal, .hljs-symbol, .hljs-bullet { color: #0550ae; }
+.hljs-built_in, .hljs-class .hljs-title { color: #953800; }
+.hljs-variable, .hljs-template-variable, .hljs-attribute { color: #953800; }
+.hljs-meta { color: #6e7781; }
+.hljs-deletion { color: #82071e; background: #ffebe9; }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: bold; }
