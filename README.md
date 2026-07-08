@@ -26,6 +26,12 @@ Built with SwiftUI + TextKit + WKWebView. Everything runs **offline** — the sy
 brew install --cask maxmilian/tap/markout
 ```
 
+Once installed, open any file from the terminal:
+
+```sh
+markout path/to/file.md
+```
+
 ### Or download the `.dmg`
 
 **[⬇ Download the latest release](https://github.com/maxmilian/markout/releases/latest)** — or [build from source](#building).
