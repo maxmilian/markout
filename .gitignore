@@ -26,3 +26,6 @@ Package.resolved
 
 # Tooling
 .serena/
+
+# Worktrees
+.worktrees/
