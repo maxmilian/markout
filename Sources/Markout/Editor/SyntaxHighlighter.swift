@@ -39,30 +39,40 @@ struct SyntaxHighlighter {
         return out
     }
 
-    static func apply(to textStorage: NSTextStorage, baseFont: NSFont, textColor: NSColor) {
+    /// Themed highlighting: base text uses `theme.foreground`, each token its `theme.colors[token]`,
+    /// with bold/italic traits for strong/emphasis and a larger bold font for headings.
+    static func apply(to textStorage: NSTextStorage, baseFont: NSFont, theme: EditorTheme) {
         let full = NSRange(location: 0, length: textStorage.length)
-        textStorage.setAttributes([.font: baseFont, .foregroundColor: textColor], range: full)
+        textStorage.setAttributes([.font: baseFont, .foregroundColor: theme.foreground], range: full)
         let text = textStorage.string
         for (range, token) in tokens(in: text) {
             var attrs: [NSAttributedString.Key: Any] = [:]
+            if let color = theme.colors[token] {
+                attrs[.foregroundColor] = color
+            }
             switch token {
             case .heading:
                 attrs[.font] = NSFont.monospacedSystemFont(ofSize: baseFont.pointSize + 3, weight: .bold)
-                attrs[.foregroundColor] = NSColor.systemBlue
             case .strong:
                 attrs[.font] = NSFontManager.shared.convert(baseFont, toHaveTrait: .boldFontMask)
             case .emphasis:
                 attrs[.font] = NSFontManager.shared.convert(baseFont, toHaveTrait: .italicFontMask)
-            case .inlineCode, .codeBlock:
-                attrs[.foregroundColor] = NSColor.systemPurple
-            case .link:
-                attrs[.foregroundColor] = NSColor.linkColor
-            case .blockquote:
-                attrs[.foregroundColor] = NSColor.secondaryLabelColor
-            case .listMarker:
-                attrs[.foregroundColor] = NSColor.systemOrange
+            default:
+                break
             }
             textStorage.addAttributes(attrs, range: range)
         }
+    }
+
+    /// P1 shim: keep the original `textColor`-based signature working by delegating to the themed
+    /// path with a theme whose foreground is `textColor` and token colors come from `markout-light`.
+    static func apply(to textStorage: NSTextStorage, baseFont: NSFont, textColor: NSColor) {
+        let tokenColors = EditorThemeStore.theme(id: "markout-light")?.colors ?? [:]
+        let theme = EditorTheme(
+            id: "p1-shim", name: "P1",
+            background: .textBackgroundColor, foreground: textColor,
+            caret: textColor, selection: .selectedTextBackgroundColor,
+            colors: tokenColors)
+        apply(to: textStorage, baseFont: baseFont, theme: theme)
     }
 }
