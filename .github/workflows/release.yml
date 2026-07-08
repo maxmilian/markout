@@ -18,6 +18,10 @@ permissions:
 jobs:
   release:
     runs-on: macos-15
+    env:
+      # Fine-grained PAT with Contents:write on maxmilian/homebrew-tap.
+      # If unset, the Homebrew tap update step is skipped (release still ships).
+      TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -82,3 +86,18 @@ jobs:
             "Markout-${GITHUB_REF_NAME}.dmg" \
             --title "Markout ${GITHUB_REF_NAME}" \
             --notes-file notes.md
+
+      - name: Update Homebrew tap
+        if: ${{ env.TAP_TOKEN != '' }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          SHA="$(shasum -a 256 "Markout-${GITHUB_REF_NAME}.dmg" | awk '{print $1}')"
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/maxmilian/homebrew-tap.git" tap
+          cd tap
+          sed -i '' -E "s/version \"[^\"]+\"/version \"${VERSION}\"/" Casks/markout.rb
+          sed -i '' -E "s/sha256 \"[^\"]+\"/sha256 \"${SHA}\"/" Casks/markout.rb
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/markout.rb
+          git commit -m "Update Markout to ${VERSION}"
+          git push
