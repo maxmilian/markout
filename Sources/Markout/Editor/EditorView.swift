@@ -5,14 +5,25 @@ struct EditorView: NSViewRepresentable {
     @Binding var text: String
     /// Called with the 1-based source line at the top of the visible area as the user scrolls/edits.
     var onVisibleLineChange: ((Int) -> Void)? = nil
+    /// The document's file URL, used to save pasted/dropped images beside it.
+    var documentURL: URL? = nil
 
-    func makeCoordinator() -> Coordinator { Coordinator(text: $text, onVisibleLineChange: onVisibleLineChange) }
+    func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text, onVisibleLineChange: onVisibleLineChange, documentURL: documentURL)
+    }
 
     func makeNSView(context: Context) -> NSScrollView {
         let (scroll, textView) = MarkdownTextViewFactory.make()
         textView.delegate = context.coordinator
         textView.string = text
         context.coordinator.textView = textView
+        textView.onInsertImage = { [weak textView] image in
+            guard let textView else { return }
+            guard let markdown = try? ImagePasteHandler.markdownLink(
+                for: image, documentURL: context.coordinator.documentURL), !markdown.isEmpty
+            else { return }
+            textView.insertText(markdown, replacementRange: textView.selectedRange())
+        }
         context.coordinator.rehighlight()
         context.coordinator.observeScrolling(of: scroll)
         return scroll
@@ -20,6 +31,7 @@ struct EditorView: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSScrollView, context: Context) {
         context.coordinator.onVisibleLineChange = onVisibleLineChange
+        context.coordinator.documentURL = documentURL
         guard let textView = context.coordinator.textView else { return }
         if textView.string != text {
             let selected = textView.selectedRanges
@@ -32,12 +44,18 @@ struct EditorView: NSViewRepresentable {
     final class Coordinator: NSObject, NSTextViewDelegate {
         @Binding var text: String
         var onVisibleLineChange: ((Int) -> Void)?
-        weak var textView: NSTextView?
+        var documentURL: URL?
+        weak var textView: MarkoutTextView?
         private var lastReportedLine = -1
 
-        init(text: Binding<String>, onVisibleLineChange: ((Int) -> Void)?) {
+        init(text: Binding<String>, onVisibleLineChange: ((Int) -> Void)?, documentURL: URL?) {
             _text = text
             self.onVisibleLineChange = onVisibleLineChange
+            self.documentURL = documentURL
+        }
+
+        deinit {
+            NotificationCenter.default.removeObserver(self)
         }
 
         func textDidChange(_ notification: Notification) {
