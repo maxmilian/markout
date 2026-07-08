@@ -21,7 +21,6 @@ struct SettingsView: View {
 
 private struct EditorSettingsTab: View {
     @AppStorage(SettingsKey.editorFontSize) private var fontSize = SettingsDefault.editorFontSize
-    @AppStorage(SettingsKey.editorThemeID) private var editorThemeID = SettingsDefault.editorThemeID
     @AppStorage(SettingsKey.softWrap) private var softWrap = SettingsDefault.softWrap
     @AppStorage(SettingsKey.showLineNumbers) private var showLineNumbers = SettingsDefault.showLineNumbers
 
@@ -37,12 +36,6 @@ private struct EditorSettingsTab: View {
             Text("\(Int(fontSize)) pt")
                 .foregroundStyle(.secondary)
 
-            Picker("Editor theme", selection: $editorThemeID) {
-                ForEach(EditorThemeStore.all) { theme in
-                    Text(theme.name).tag(theme.id)
-                }
-            }
-
             Toggle("Soft wrap", isOn: $softWrap)
             Toggle("Show line numbers", isOn: $showLineNumbers)
         }
@@ -57,15 +50,24 @@ private struct PreviewSettingsTab: View {
         customCSSPath.isEmpty ? nil : URL(fileURLWithPath: customCSSPath).lastPathComponent
     }
 
+    /// On/off for using the imported custom CSS, backed by the `previewThemeID` sentinel.
+    private var useCustom: Binding<Bool> {
+        Binding(
+            get: { previewThemeID == customPreviewThemeID },
+            set: { previewThemeID = $0 ? customPreviewThemeID : SettingsDefault.previewThemeID })
+    }
+
     var body: some View {
         Form {
-            Picker("Preview theme", selection: $previewThemeID) {
-                ForEach(PreviewThemeStore.bundled) { theme in
-                    Text(theme.name).tag(theme.id)
-                }
-                if let customName {
-                    Text("Custom — \(customName)").tag(customPreviewThemeID)
-                }
+            Text("Light / Dark is controlled per pane from the toolbar.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+
+            Toggle("Use custom CSS for preview", isOn: useCustom)
+                .disabled(customName == nil)
+
+            if let customName {
+                LabeledContent("Custom CSS", value: customName)
             }
 
             HStack {
