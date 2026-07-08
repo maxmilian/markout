@@ -55,12 +55,28 @@ final class MarkoutTextView: NSTextView {
         super.paste(sender)
     }
 
+    override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        if onInsertImage != nil, pasteboardHasImage(sender.draggingPasteboard) {
+            return .copy
+        }
+        return super.draggingEntered(sender)
+    }
+
     override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
         if let handler = onInsertImage, let image = image(from: sender.draggingPasteboard) {
             handler(image)
             return true
         }
         return super.performDragOperation(sender)
+    }
+
+    private func pasteboardHasImage(_ pasteboard: NSPasteboard) -> Bool {
+        let options: [NSPasteboard.ReadingOptionKey: Any] = [
+            .urlReadingContentsConformToTypes: [UTType.image.identifier]
+        ]
+        if pasteboard.canReadObject(forClasses: [NSURL.self], options: options) { return true }
+        return pasteboard.canReadItem(
+            withDataConformingToTypes: [UTType.png.identifier, UTType.tiff.identifier])
     }
 
     private func image(from pasteboard: NSPasteboard) -> NSImage? {
