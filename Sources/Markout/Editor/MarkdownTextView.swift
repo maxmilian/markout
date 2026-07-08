@@ -133,31 +133,47 @@ enum MarkdownTextViewFactory {
         return (scroll, textView)
     }
 
-    /// Applies settings-driven appearance: font size, editor theme colors, and soft-wrap.
+    /// Applies settings-driven appearance: font size, editor theme colors, soft-wrap, line numbers.
     /// Called at creation and whenever the bound settings change.
     static func configure(_ textView: MarkoutTextView, in scroll: NSScrollView,
-                          fontSize: Double, theme: EditorTheme, softWrap: Bool) {
+                          fontSize: Double, theme: EditorTheme, softWrap: Bool,
+                          showLineNumbers: Bool) {
         textView.font = NSFont.monospacedSystemFont(ofSize: CGFloat(fontSize), weight: .regular)
         textView.backgroundColor = theme.background
         textView.drawsBackground = true
         textView.insertionPointColor = theme.caret
         textView.selectedTextAttributes = [.backgroundColor: theme.selection]
+        // Theme the scroll view too, so the line-number gutter and margins match the editor.
+        scroll.drawsBackground = true
+        scroll.backgroundColor = theme.background
 
-        guard let container = textView.textContainer else { return }
-        if softWrap {
-            container.widthTracksTextView = true
-            container.containerSize = NSSize(
-                width: scroll.contentSize.width, height: CGFloat.greatestFiniteMagnitude)
-            textView.isHorizontallyResizable = false
-            textView.autoresizingMask = [.width]
-            scroll.hasHorizontalScroller = false
+        if let container = textView.textContainer {
+            if softWrap {
+                container.widthTracksTextView = true
+                container.containerSize = NSSize(
+                    width: scroll.contentSize.width, height: CGFloat.greatestFiniteMagnitude)
+                textView.isHorizontallyResizable = false
+                textView.autoresizingMask = [.width]
+                scroll.hasHorizontalScroller = false
+            } else {
+                container.widthTracksTextView = false
+                container.containerSize = NSSize(
+                    width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+                textView.isHorizontallyResizable = true
+                textView.autoresizingMask = [.width, .height]
+                scroll.hasHorizontalScroller = true
+            }
+        }
+
+        if showLineNumbers {
+            let ruler = (scroll.verticalRulerView as? LineNumberRulerView)
+                ?? LineNumberRulerView(textView: textView)
+            scroll.verticalRulerView = ruler
+            scroll.hasVerticalRuler = true
+            scroll.rulersVisible = true
+            ruler.refresh()
         } else {
-            container.widthTracksTextView = false
-            container.containerSize = NSSize(
-                width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
-            textView.isHorizontallyResizable = true
-            textView.autoresizingMask = [.width, .height]
-            scroll.hasHorizontalScroller = true
+            scroll.rulersVisible = false
         }
     }
 }

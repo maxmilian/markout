@@ -19,6 +19,8 @@ struct ContentView: View {
     @AppStorage(SettingsKey.editorThemeID) private var editorThemeID = SettingsDefault.editorThemeID
     @AppStorage(SettingsKey.softWrap) private var softWrap = SettingsDefault.softWrap
     @AppStorage(SettingsKey.showWordCount) private var showWordCount = SettingsDefault.showWordCount
+    @AppStorage(SettingsKey.showLineNumbers) private var showLineNumbers = SettingsDefault.showLineNumbers
+    @AppStorage(SettingsKey.customPreviewCSSPath) private var customPreviewCSSPath = SettingsDefault.customPreviewCSSPath
 
     @StateObject private var bridge = EditorBridge()
     @State private var renderedHTML: String = ""
@@ -27,7 +29,12 @@ struct ContentView: View {
     @State private var showContents = false
 
     private var activeTheme: PreviewTheme {
-        PreviewThemeStore.theme(id: previewThemeID)
+        if previewThemeID == customPreviewThemeID, !customPreviewCSSPath.isEmpty,
+           let custom = PreviewThemeStore.custom(
+               fromFileURL: URL(fileURLWithPath: customPreviewCSSPath)) {
+            return custom
+        }
+        return PreviewThemeStore.theme(id: previewThemeID)
             ?? PreviewThemeStore.theme(id: "default")
             ?? PreviewTheme(id: "default", name: "Default", css: HTMLTemplate.css)
     }
@@ -46,7 +53,8 @@ struct ContentView: View {
                     onEditorReady: { bridge.textView = $0 },
                     fontSize: editorFontSize,
                     editorThemeID: editorThemeID,
-                    softWrap: softWrap
+                    softWrap: softWrap,
+                    showLineNumbers: showLineNumbers
                 )
                 .frame(minWidth: 320)
                 PreviewView(
@@ -91,6 +99,9 @@ struct ContentView: View {
                 Picker("Preview Theme", selection: $previewThemeID) {
                     ForEach(PreviewThemeStore.bundled) { theme in
                         Text(theme.name).tag(theme.id)
+                    }
+                    if !customPreviewCSSPath.isEmpty {
+                        Text("Custom").tag(customPreviewThemeID)
                     }
                 }
                 .pickerStyle(.menu)
