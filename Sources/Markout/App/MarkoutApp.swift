@@ -1,4 +1,14 @@
+import AppKit
 import SwiftUI
+
+/// Routes a Find action to whichever `NSTextView` is first responder, driving its built-in
+/// `NSTextFinder` (the editor enables `usesFindBar`). The action is carried as the sender's `tag`,
+/// which is how `performTextFinderAction(_:)` reads which operation to perform.
+private func performTextFinderAction(_ action: NSTextFinder.Action) {
+    let sender = NSMenuItem()
+    sender.tag = action.rawValue
+    NSApp.sendAction(#selector(NSTextView.performTextFinderAction(_:)), to: nil, from: sender)
+}
 
 @main
 struct MarkoutApp: App {
@@ -9,6 +19,17 @@ struct MarkoutApp: App {
             ContentView(document: file.$document, documentURL: file.fileURL)
         }
         .commands {
+            CommandGroup(after: .pasteboard) {
+                Divider()
+                Button("Find…") { performTextFinderAction(.showFindInterface) }
+                    .keyboardShortcut("f", modifiers: .command)
+                Button("Find Next") { performTextFinderAction(.nextMatch) }
+                    .keyboardShortcut("g", modifiers: .command)
+                Button("Find Previous") { performTextFinderAction(.previousMatch) }
+                    .keyboardShortcut("g", modifiers: [.command, .shift])
+                Button("Use Selection for Find") { performTextFinderAction(.setSearchString) }
+                    .keyboardShortcut("e", modifiers: .command)
+            }
             CommandGroup(after: .saveItem) {
                 Divider()
                 Button("Export as HTML…") { documentActions?.exportHTML() }
