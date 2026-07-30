@@ -14,6 +14,7 @@ struct DocumentActions {
     var exportPDF: () -> Void
     var insertTableOfContents: () -> Void
     var format: (FormatCommand) -> Void
+    var reloadFromDisk: () -> Void
 }
 
 private struct DocumentActionsKey: FocusedValueKey {

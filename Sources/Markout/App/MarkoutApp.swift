@@ -11,6 +11,10 @@ struct MarkoutApp: App {
         .commands {
             CommandGroup(after: .saveItem) {
                 Divider()
+                Button("Reload from Disk") { documentActions?.reloadFromDisk() }
+                    .keyboardShortcut("r", modifiers: .command)
+                    .disabled(documentActions == nil)
+                Divider()
                 Button("Export as HTML…") { documentActions?.exportHTML() }
                     .disabled(documentActions == nil)
                 Button("Export as PDF…") { documentActions?.exportPDF() }

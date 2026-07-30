@@ -69,9 +69,17 @@ struct EditorView: NSViewRepresentable {
         }
 
         if textView.string != text {
-            let selected = textView.selectedRanges
+            // Clamp the old selection into the new text: a wholesale replacement (Reload from Disk,
+            // a whole-document format) can shorten the string, and an out-of-bounds selectedRange
+            // raises an exception.
+            let selected = textView.selectedRanges.map(\.rangeValue)
             textView.string = text
-            textView.selectedRanges = selected
+            let length = (text as NSString).length
+            let clamped = selected.map { range -> NSValue in
+                let location = min(range.location, length)
+                return NSValue(range: NSRange(location: location, length: min(range.length, length - location)))
+            }
+            textView.selectedRanges = clamped.isEmpty ? [NSValue(range: NSRange(location: 0, length: 0))] : clamped
             context.coordinator.rehighlight()
         } else if appearanceChanged {
             context.coordinator.rehighlight()

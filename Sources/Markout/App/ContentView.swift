@@ -110,6 +110,15 @@ struct ContentView: View {
                     Label("Contents", systemImage: "list.bullet.indent")
                 }
             }
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    reloadFromDisk()
+                } label: {
+                    Label("Reload from Disk", systemImage: "arrow.clockwise")
+                }
+                .help("Reload from Disk (⌘R)")
+                .disabled(documentURL == nil)
+            }
             ToolbarItemGroup(placement: .automatic) {
                 Button { applyFormat(.bold) } label: { Image(systemName: "bold") }
                     .help("Bold (⌘B)")
@@ -141,7 +150,8 @@ struct ContentView: View {
             exportHTML: exportHTML,
             exportPDF: exportPDF,
             insertTableOfContents: insertTableOfContents,
-            format: applyFormat
+            format: applyFormat,
+            reloadFromDisk: reloadFromDisk
         ))
         .onAppear { render(document.text) }
         .onChange(of: document.text) { _, newValue in scheduleRender(newValue) }
@@ -256,6 +266,62 @@ struct ContentView: View {
         textView.textStorage?.replaceCharacters(in: fullRange, with: result.text)
         textView.didChangeText()
         textView.setSelectedRange(result.selection)
+    }
+
+    /// Re-reads the document's file and replaces the buffer with it. When the buffer also has
+    /// unsaved edits (`ReloadDecision.conflict`), asks before discarding them.
+    private func reloadFromDisk() {
+        guard let url = documentURL else { return }
+        let window = bridge.textView?.window
+        let diskText = (try? Data(contentsOf: url)).map(MarkdownDocument.decode)
+        // The dirty flag lives on the backing NSDocument, NOT on `window.isDocumentEdited` —
+        // SwiftUI's window never sets that. Assume unsaved changes if the document is unreachable,
+        // so an unexpected hierarchy prompts instead of silently overwriting.
+        let nsDoc = window?.windowController?.document as? NSDocument
+        switch ReloadDecision.evaluate(
+            diskText: diskText,
+            bufferText: document.text,
+            hasUnsavedChanges: nsDoc?.isDocumentEdited ?? true
+        ) {
+        case .upToDate:
+            return
+        case .unreadable:
+            let alert = NSAlert()
+            alert.alertStyle = .warning
+            alert.messageText = "Can’t Reload"
+            alert.informativeText = "“\(url.lastPathComponent)” could not be read. It may have been moved, renamed, or deleted."
+            alert.runModal()
+        case .reload(let text):
+            apply(reloaded: text, in: window)
+        case .conflict(let text):
+            let alert = NSAlert()
+            alert.alertStyle = .warning
+            alert.messageText = "“\(url.lastPathComponent)” Has Been Changed by Another Application"
+            alert.informativeText = "Reloading replaces this window's content with the version on disk. Your unsaved changes will be lost."
+            alert.addButton(withTitle: "Reload")
+            alert.addButton(withTitle: "Cancel")
+            alert.buttons.first?.hasDestructiveAction = true
+            guard alert.runModal() == .alertFirstButtonReturn else { return }
+            apply(reloaded: text, in: window)
+        }
+    }
+
+    /// Swaps in the on-disk text and re-syncs the backing document with the file.
+    ///
+    /// `fileModificationDate` must be updated too: it is what AppKit compares against when
+    /// autosaving, and leaving it stale makes the next autosave raise its own "changed by another
+    /// application" sheet even though we just loaded that very version. Clearing the change count is
+    /// deferred because assigning `document.text` bumps it.
+    private func apply(reloaded text: String, in window: NSWindow?) {
+        document.text = text
+        let nsDoc = window?.windowController?.document as? NSDocument
+        if let url = documentURL,
+           let modified = try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate {
+            nsDoc?.fileModificationDate = modified
+        }
+        DispatchQueue.main.async {
+            nsDoc?.updateChangeCount(.changeCleared)
+        }
     }
 
     private func insertTableOfContents() {
