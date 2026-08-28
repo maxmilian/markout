@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import WebKit
 
 enum PreviewInjection {
@@ -20,6 +21,8 @@ struct PreviewView: NSViewRepresentable {
     var previewCSS: String = HTMLTemplate.css
     /// When set, scroll the preview so the block at this 1-based source line is at the top.
     var scrollLine: Int? = nil
+    /// The document on disk, used to resolve relative links in the preview.
+    var documentURL: URL? = nil
     /// Called once with the underlying WebView, so the owner can drive PDF export.
     var onWebViewReady: ((WKWebView) -> Void)? = nil
 
@@ -30,6 +33,7 @@ struct PreviewView: NSViewRepresentable {
         webView.setValue(false, forKey: "drawsBackground")
         webView.navigationDelegate = context.coordinator
         onWebViewReady?(webView)
+        context.coordinator.documentURL = documentURL
         context.coordinator.configure(body: htmlBody, isDark: isDark, css: previewCSS)
         webView.loadHTMLString(
             HTMLTemplate.page(theme: isDark ? .dark : .light, previewCSS: previewCSS),
@@ -40,6 +44,7 @@ struct PreviewView: NSViewRepresentable {
 
     func updateNSView(_ webView: WKWebView, context: Context) {
         let coordinator = context.coordinator
+        coordinator.documentURL = documentURL
 
         // A CSS/theme change requires a full template reload; body changes only inject.
         if coordinator.needsReload(isDark: isDark, css: previewCSS) {
@@ -68,6 +73,7 @@ struct PreviewView: NSViewRepresentable {
         var isDark = false
         var css = ""
         var lastScrollLine: Int?
+        var documentURL: URL?
 
         func configure(body: String, isDark: Bool, css: String) {
             self.pendingBody = body
@@ -77,6 +83,34 @@ struct PreviewView: NSViewRepresentable {
 
         func needsReload(isDark: Bool, css: String) -> Bool {
             css != self.css || isDark != self.isDark
+        }
+
+        /// Without this the preview would navigate itself away when a link is clicked. Links go to
+        /// the system (browser, mail, Preview…), Markdown files open in a new Markout window, and
+        /// only in-page anchors are allowed to move the preview.
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationAction: WKNavigationAction,
+            decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+        ) {
+            let action = LinkPolicy.action(
+                for: navigationAction.request.url,
+                isLinkActivation: navigationAction.navigationType == .linkActivated,
+                baseURL: Bundle.main.resourceURL,
+                documentURL: documentURL)
+
+            switch action {
+            case .allow:
+                decisionHandler(.allow)
+            case .cancel:
+                decisionHandler(.cancel)
+            case .openExternally(let url):
+                decisionHandler(.cancel)
+                NSWorkspace.shared.open(url)
+            case .openDocument(let url):
+                decisionHandler(.cancel)
+                NSDocumentController.shared.openDocument(withContentsOf: url, display: true) { _, _, _ in }
+            }
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
