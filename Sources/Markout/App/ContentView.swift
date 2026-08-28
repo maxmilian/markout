@@ -93,6 +93,7 @@ struct ContentView: View {
                     isDark: previewIsDark,
                     previewCSS: activeTheme.css,
                     scrollLine: previewScrollLine,
+                    documentURL: documentURL,
                     onWebViewReady: { bridge.webView = $0 }
                 )
                 .frame(minWidth: 320)
