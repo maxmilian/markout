@@ -46,6 +46,13 @@ Verified against a debug build on macOS 26.6.2, ad-hoc signed, with the system
 setting *Prefer tabs when opening documents* left at its default
 (*In Full Screen Only*).
 
+**These launch behaviors are OS-version sensitive and were not verified on the
+macOS 14 deployment floor.** Whether `DocumentGroup` opens a panel, an untitled
+document, or nothing has changed between releases. The launch logic is therefore
+written to be indifferent to which of them happens: close a blank, unedited,
+un-restored document if one appeared, and show the welcome window if no document
+remains — an outcome that is correct on any of those variants.
+
 **Tabbing must be explicit.** Setting `tabbingMode = .preferred` on a document
 window after it exists is too late — two documents still opened as two separate
 windows. Actively joining the new window to an existing one works:
@@ -86,20 +93,39 @@ from `NSDocumentController`.**
 ### Tabs
 
 Every document window is tagged with the tabbing identifier
-`tech.ankey.Markout.document` and `tabbingMode = .preferred`. When a document
-window becomes available and another visible window carries the same identifier
-in a different tab group, the new window joins that group via
-`addTabbedWindow(_:ordered: .above)` and becomes the selected tab.
+`tech.ankey.Markout.document` and `tabbingMode = .preferred`. A new document
+window then joins an existing group via `addTabbedWindow(_:ordered: .above)` and
+becomes the selected tab.
+
+**Which group it joins matters.** Once a tab has been dragged out, more than one
+document tab group exists, and picking an arbitrary one would undo the drag-out
+the user just performed, or move the new window to another screen. The host is
+chosen in this order:
+
+1. The group of the app's key window, if that window is a document window.
+2. Otherwise the group of the app's main window, under the same condition.
+3. Otherwise the first visible document window in a different group.
+4. Otherwise none — the window opens as the first tab of its own group.
+
+A new document therefore always appears in the group, and on the screen, the
+user is currently working in.
 
 The system then provides, at no cost: the tab bar, ⌘⇧[ / ⌘⇧], drag-out to a
 separate window, drag-in to merge, *Merge All Windows*, and per-tab close.
 
-The welcome window is explicitly `tabbingMode = .disallowed` — it never
-participates in the document tab group.
+Windows that are not documents — the welcome window and the Settings window —
+never participate: the welcome window is created with
+`tabbingMode = .disallowed`, and no window is accepted as a tab host unless it
+carries Markout's document tabbing identifier. This matters when the user has
+set *Prefer tabs when opening documents* to *Always*, which is why that setting
+is part of the manual verification below.
 
 ### Recent documents
 
-A store persists at `~/Library/Application Support/Markout/recents.json`:
+A store persists at `~/Library/Application Support/Markout/recents.json`. The
+debug build and the installed build share the bundle identifier, and therefore
+this file; the two lists mixing is harmless. A file whose `version` is not `1`
+decodes to an empty list rather than being reinterpreted.
 
 ```json
 { "version": 1,
@@ -108,16 +134,31 @@ A store persists at `~/Library/Application Support/Markout/recents.json`:
 
 Rules, all pure functions over the decoded model:
 
-- Recording a URL moves it to the front; an existing entry for the same
-  standardized path is replaced, never duplicated.
+- Recording a URL moves it to the front; an existing entry for the same path is
+  replaced, never duplicated. Paths are compared after
+  `standardizedFileURL.resolvingSymlinksInPath()`, which removes `.`/`..` and
+  resolves symlinks. Symlink resolution only applies to paths that exist, so a
+  file recorded while its volume was mounted and again while it was not can
+  produce two entries. That is accepted: keeping an unreachable file visible
+  matters more than perfect de-duplication.
 - The list is capped at 10 entries; the oldest fall off.
-- Ordering is by `openedAt`, newest first.
+- The most recently recorded document is first. Recording inserts at the front rather than sorting by `openedAt`, so a caller that backdates an entry does not reorder the list.
 - Presence on disk is resolved at display time, never stored — a file on an
   unmounted volume must not be dropped from the list.
+- A document is recorded when its window has a file URL, so an unsaved
+  *Untitled* document never enters the list; saving it under a name does.
+- `openedAt` is the time the document was opened or saved, not the time its tab
+  was last selected. Switching tabs does not reorder the list.
+- Opening a file that is already open — from the welcome window or anywhere
+  else — brings its existing window forward rather than creating a second
+  document, and refreshes its `openedAt`.
 
 A row is presented as: display name (filename), abbreviated directory
-(`~/side/ankey/markout/docs`), and a relative time (`今天 14:02`, `昨天`,
-`9月7日`). Rows whose file is missing render dimmed and are not clickable.
+(`~/side/ankey/markout/docs`), and a relative time (`Today 14:02`, `Yesterday`,
+`Sep 7`, `Sep 7, 2025`). Copy is English, matching the rest of the app's UI.
+Rows whose file is missing render dimmed and are not clickable. Because nothing
+on disk notifies the app when a recorded file is renamed, the list is re-read
+every time the welcome window is shown.
 
 ### Launch
 
@@ -127,12 +168,18 @@ A row is presented as: display name (filename), abbreviated directory
 | System state restoration reopens documents | Restored documents; no welcome window |
 | Nothing to open | The launch-created untitled document is closed; the welcome window appears |
 | All document windows closed while running | App stays running; welcome window is *not* forced back |
+| Dock icon clicked, or the app reactivated, with no windows open | The welcome window appears |
+| An unsaved *Untitled* document is restored by autosave | It survives; the welcome window does not appear |
 
 The welcome window can be summoned at any time from `Window ▸ Welcome to
-Markout`. Choosing a row opens that document through the SwiftUI
-`openDocument` action, which routes into the normal `DocumentGroup` flow — so
-the opened file lands as a tab and is recorded in the recents store. The
-welcome window closes once a document opens from it.
+Markout`. Choosing a row opens that document through
+`NSDocumentController.shared.openDocument(withContentsOf:display:)`, **not** the
+SwiftUI `openDocument` environment action: the welcome window is hosted outside
+the `DocumentGroup` scene, where that environment value has no scene to route
+into. The document controller is SwiftUI's own, so the file still opens as a
+normal document window — and therefore as a tab, recorded in the store by
+`ContentView`. The welcome window closes only once the document has actually
+opened; if opening fails, it stays put and the list is re-read so the row dims.
 
 ## Components
 
@@ -168,6 +215,8 @@ is macOS 15+).
   window stays open.
 - **No existing window to join** — the document window simply opens as the
   first window of a new tab group.
+- **Store file from a future version** — decoded as an empty list; the next
+  recorded document rewrites it in the current format.
 
 ## Testing
 
@@ -190,8 +239,17 @@ AppKit/WebKit edges:
 - A tab drags out to its own window and merges back.
 - Launch with no documents shows the welcome window; launch with a file
   argument does not.
-- A recorded file, then renamed on disk, renders dimmed and unclickable.
+- A recorded file, then renamed on disk, renders dimmed and unclickable the
+  next time the welcome window is shown.
 - Recents survive quitting and relaunching the app.
+- With *Prefer tabs when opening documents* set to *Always*, neither the welcome
+  window nor Settings is absorbed into the document tab group.
+- With the welcome window frontmost, the Format menu, `Reload from Disk` and the
+  Export commands are disabled — they must never act on a background tab's
+  document. (`DocumentActions` is published through `.focusedSceneValue`, and the
+  welcome window is an AppKit window outside the scene graph, so this needs
+  checking rather than assuming.)
+- After switching tabs, `⌘R` and Export act on the newly selected tab's file.
 
 ## Out of Scope
 
@@ -200,4 +258,11 @@ AppKit/WebKit edges:
 - A toolbar recents dropdown inside document windows.
 - Restoring which tab was selected, or tab order, across launches — whatever
   macOS state restoration already does is what we get.
-- Fixing the ad-hoc signing situation so the system recents list persists.
+- Clearing the recents list, or removing a single entry from it.
+- Sandboxing. The store keeps plain paths, which is sufficient for an
+  unsandboxed app; a sandboxed build would have to store security-scoped
+  bookmarks instead, and the `version` field exists to migrate that.
+- Fixing the ad-hoc signing situation so the system recents list persists. Even
+  if a Developer ID signature later revives the system list, this store stays —
+  the welcome window needs paths, timestamps and existence checks that the
+  system list does not expose.

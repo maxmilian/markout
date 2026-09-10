@@ -132,6 +132,11 @@ struct RecentDocumentsTests {
         #expect(RecentDocumentsList.decode(Data("not json".utf8)).isEmpty)
         #expect(RecentDocumentsList.decode(Data()).isEmpty)
     }
+
+    @Test func anUnknownVersionDecodesToEmpty() {
+        let future = Data(#"{"version": 2, "entries": [{"path": "/tmp/a.md", "openedAt": 1}]}"#.utf8)
+        #expect(RecentDocumentsList.decode(future).isEmpty)
+    }
 }
 ```
 
@@ -194,7 +199,8 @@ enum RecentDocumentsList {
         guard let data, !data.isEmpty else { return [] }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .secondsSince1970
-        guard let file = try? decoder.decode(StoredFile.self, from: data) else { return [] }
+        guard let file = try? decoder.decode(StoredFile.self, from: data),
+              file.version == 1 else { return [] }
         return file.entries
     }
 
@@ -214,9 +220,9 @@ xcodebuild test -project Markout.xcodeproj -scheme Markout \
   -only-testing:MarkoutTests/RecentDocumentsTests 2>&1 | tail -20
 ```
 
-Expected: PASS, 6 tests.
+Expected: PASS, 7 tests.
 
-Note: `resolvingSymlinksInPath()` maps `/tmp` to `/private/tmp` on macOS only when the path exists. The test paths above do not exist, so they are returned unchanged — that is why the expectations use `/tmp/...` literals.
+Note on the `/tmp` literals: `resolvingSymlinksInPath()` resolves `/tmp` to `/private/tmp` and then strips the `/private` prefix again, so `/tmp/...` paths round-trip unchanged whether or not the file exists (verified on macOS 26.6.2). The expectations can safely use `/tmp/...`.
 
 - [ ] **Step 5: Commit**
 
@@ -242,9 +248,10 @@ git commit -m "feat: add recent documents list model"
 
 - [ ] **Step 1: Write the failing tests**
 
-Append to `Tests/MarkoutTests/RecentDocumentsTests.swift`, inside the `RecentDocumentsTests` struct:
+Append to the end of `Tests/MarkoutTests/RecentDocumentsTests.swift` as an extension — do **not** try to splice these into the struct body from Task 1:
 
 ```swift
+extension RecentDocumentsTests {
     private var enUS: Locale { Locale(identifier: "en_US_POSIX") }
 
     private func calendar(_ timeZone: String = "UTC") -> Calendar {
@@ -301,6 +308,7 @@ Append to `Tests/MarkoutTests/RecentDocumentsTests.swift`, inside the `RecentDoc
         #expect(RecentDocumentDisplay.timestamp(
             earlierYear, now: now, calendar: calendar, locale: enUS) == "Aug 6, 2025")
     }
+}
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
@@ -364,7 +372,7 @@ xcodebuild test -project Markout.xcodeproj -scheme Markout \
   -only-testing:MarkoutTests/RecentDocumentsTests 2>&1 | tail -20
 ```
 
-Expected: PASS, 12 tests.
+Expected: PASS, 13 tests.
 
 - [ ] **Step 5: Commit**
 
@@ -392,9 +400,10 @@ git commit -m "feat: add recent document row formatting"
 
 - [ ] **Step 1: Write the failing tests**
 
-Append to `Tests/MarkoutTests/RecentDocumentsTests.swift`, inside the struct:
+Append to the end of `Tests/MarkoutTests/RecentDocumentsTests.swift` as a second extension:
 
 ```swift
+extension RecentDocumentsTests {
     private func temporaryStoreURL() -> URL {
         FileManager.default.temporaryDirectory
             .appendingPathComponent("markout-recents-tests", isDirectory: true)
@@ -431,6 +440,7 @@ Append to `Tests/MarkoutTests/RecentDocumentsTests.swift`, inside the struct:
         store.record(URL(fileURLWithPath: "/tmp/a.md"), at: now)
         #expect(RecentDocumentsStore(fileURL: url).entries.map(\.path) == ["/tmp/a.md"])
     }
+}
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
@@ -493,7 +503,7 @@ xcodebuild test -project Markout.xcodeproj -scheme Markout \
   -only-testing:MarkoutTests/RecentDocumentsTests 2>&1 | tail -20
 ```
 
-Expected: PASS, 15 tests.
+Expected: PASS, 16 tests.
 
 - [ ] **Step 5: Run the whole suite to confirm nothing regressed**
 
@@ -521,7 +531,7 @@ git commit -m "feat: persist recent documents to application support"
 
 **Interfaces:**
 - Consumes: `RecentDocumentsStore.shared` from Task 3.
-- Produces: `struct WindowTabbingAccessor: NSViewRepresentable`, and the constant `markoutDocumentTabbingIdentifier = "tech.ankey.Markout.document"`.
+- Produces: `struct WindowTabbingAccessor: NSViewRepresentable`, and the constant `let markoutDocumentTabbingIdentifier = NSWindow.TabbingIdentifier("tech.ankey.Markout.document")` (`TabbingIdentifier` is a typealias for `String`).
 
 Spike note: setting `tabbingMode` alone is **not** enough — a window that already exists will not retroactively join a group. The new window must actively call `addTabbedWindow` on an existing one.
 
@@ -543,27 +553,42 @@ let markoutDocumentTabbingIdentifier = NSWindow.TabbingIdentifier("tech.ankey.Ma
 /// Windows — is then handled by AppKit.
 struct WindowTabbingAccessor: NSViewRepresentable {
     func makeNSView(context: Context) -> NSView {
-        let view = NSView(frame: .zero)
-        DispatchQueue.main.async { joinTabGroup(from: view) }
-        return view
+        NSView(frame: .zero)
     }
 
-    func updateNSView(_ nsView: NSView, context: Context) {}
+    /// The view has no window during `makeNSView`, and there is no callback for gaining one, so the
+    /// attempt is repeated from `updateNSView`. Joining is idempotent: once the window is in a
+    /// group, every later attempt finds no host outside it and does nothing.
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async { joinTabGroup(from: nsView) }
+    }
 
     private func joinTabGroup(from view: NSView) {
         guard let window = view.window else { return }
         window.tabbingMode = .preferred
         window.tabbingIdentifier = markoutDocumentTabbingIdentifier
 
-        let host = NSApp.windows.first {
-            $0 !== window
-                && $0.tabbingIdentifier == markoutDocumentTabbingIdentifier
-                && $0.isVisible
-                && $0.tabGroup !== window.tabGroup
-        }
-        guard let host else { return }
+        guard let host = tabHost(for: window) else { return }
         host.addTabbedWindow(window, ordered: .above)
         window.makeKeyAndOrderFront(nil)
+    }
+
+    /// The window whose tab group the new document should join.
+    ///
+    /// Preferring the key (then main) window keeps a new document in the group the user is working
+    /// in, and on that group's screen. Falling back to any document window would drop it into an
+    /// arbitrary group — including one the user just deliberately dragged out.
+    private func tabHost(for window: NSWindow) -> NSWindow? {
+        func isCandidate(_ candidate: NSWindow) -> Bool {
+            candidate !== window
+                && candidate.tabbingIdentifier == markoutDocumentTabbingIdentifier
+                && candidate.isVisible
+                && (window.tabGroup == nil || candidate.tabGroup !== window.tabGroup)
+        }
+
+        if let key = NSApp.keyWindow, isCandidate(key) { return key }
+        if let main = NSApp.mainWindow, isCandidate(main) { return main }
+        return NSApp.windows.first(where: isCandidate)
     }
 }
 ```
@@ -612,6 +637,7 @@ Confirm, in the running app:
 - One window with a tab bar showing `a.md` and `b.md`.
 - ⌘⇧] and ⌘⇧[ switch tabs.
 - Dragging a tab out makes a separate window; `Window ▸ Merge All Windows` puts it back.
+- After dragging a tab out, ⌘N adds its tab to whichever window is frontmost — not always the original one.
 - ⌘N adds a new `Untitled` tab rather than a separate window.
 - Editing and ⌘S still save the correct file.
 
@@ -638,6 +664,8 @@ git commit -m "feat: open documents as native window tabs"
 - Create: `Sources/Markout/App/WelcomeView.swift`
 - Create: `Sources/Markout/App/WelcomeWindowController.swift`
 
+Rows open through `NSDocumentController.shared.openDocument(withContentsOf:display:)`, not the SwiftUI `openDocument` environment action: this window is hosted outside the `DocumentGroup` scene, where that environment value has no scene to route into. The spec says the same; the Fallback Notes at the end cover what to try if the document controller path misbehaves.
+
 **Interfaces:**
 - Consumes: `RecentDocumentsStore`, `RecentDocumentDisplay`, `RecentDocument` from Tasks 1–3.
 - Produces:
@@ -649,7 +677,6 @@ git commit -m "feat: open documents as native window tabs"
 Create `Sources/Markout/App/WelcomeView.swift`:
 
 ```swift
-import AppKit
 import SwiftUI
 
 /// The welcome window's content: what you can start from, and what you had open recently.
@@ -723,11 +750,13 @@ struct WelcomeView: View {
             }
             .contentShape(Rectangle())
             .padding(.vertical, 6)
+            // The tooltip sits on the content, not the Button: a disabled control is not
+            // guaranteed to show its own help text.
+            .help(exists ? entry.path : "File not found: \(entry.path)")
         }
         .buttonStyle(.plain)
         .disabled(!exists)
         .opacity(exists ? 1 : 0.4)
-        .help(exists ? entry.path : "File not found: \(entry.path)")
     }
 }
 ```
@@ -751,6 +780,12 @@ final class WelcomeWindowController {
     private var window: NSWindow?
 
     func show() {
+        // Re-read the list on every show. Whether a row is dimmed, and the relative time it
+        // displays, are computed while drawing — and nothing tells the app when a recorded file is
+        // renamed or deleted behind its back. Reassigning `entries` republishes even when the
+        // contents are unchanged, which is what forces the redraw.
+        RecentDocumentsStore.shared.reload()
+
         if let window {
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
@@ -760,11 +795,14 @@ final class WelcomeWindowController {
         let view = WelcomeView(
             store: RecentDocumentsStore.shared,
             onOpen: { [weak self] url in
-                self?.close()
+                // Open first, close second: if the file vanished between drawing the list and the
+                // click, the welcome window must stay where it is rather than flicker away and back.
                 NSDocumentController.shared.openDocument(withContentsOf: url, display: true) { _, _, error in
-                    guard error != nil else { return }
-                    RecentDocumentsStore.shared.reload()
-                    self?.show()
+                    guard error == nil else {
+                        RecentDocumentsStore.shared.reload()
+                        return
+                    }
+                    self?.close()
                 }
             },
             onNewDocument: { [weak self] in
@@ -777,7 +815,7 @@ final class WelcomeWindowController {
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 520, height: 380),
-            styleMask: [.titled, .closable, .miniaturizable],
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false)
         window.title = "Welcome to Markout"
@@ -855,16 +893,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // The unit tests are hosted by this app, so launching them runs this delegate. Without
+        // this guard a welcome window pops up mid-test and steals focus.
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return }
+
         DispatchQueue.main.asyncAfter(deadline: .now() + launchSettleDelay) {
             let controller = NSDocumentController.shared
             for document in controller.documents
-            where document.fileURL == nil && !document.isDocumentEdited {
+            where document.fileURL == nil
+                && !document.isDocumentEdited
+                // An unsaved document restored from autosave also has no file URL and a clean
+                // change count. It holds the user's work and must survive.
+                && document.autosavedContentsFileURL == nil {
                 document.close()
             }
             if controller.documents.isEmpty {
                 WelcomeWindowController.shared.show()
             }
         }
+    }
+
+    /// Clicking the Dock icon with no windows open lands on the welcome window rather than nothing.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        guard !hasVisibleWindows, NSDocumentController.shared.documents.isEmpty else { return true }
+        WelcomeWindowController.shared.show()
+        return false
     }
 }
 ```
@@ -911,6 +964,8 @@ Expected: `BUILD SUCCEEDED`.
 
 Quit any running Markout first (`osascript -e 'tell application "Markout" to quit'`), and close all document windows before quitting so state restoration has nothing to restore.
 
+The launch behaviors below were measured on macOS 26.6.2 and are OS-version sensitive; the deployment floor is macOS 14, where `DocumentGroup` may open a panel, an untitled document, or nothing. The delegate is written to be indifferent to which happens — close a blank, unedited, un-restored document if one appeared, then show the welcome window if nothing remains — so verify the *outcomes* in this table rather than the intermediate state.
+
 | Do this | Expect |
 |---|---|
 | `open -a .build/dd/Build/Products/Debug/Markout.app` with no documents open at last quit | Welcome window appears; no blank document window, no Open panel |
@@ -920,6 +975,11 @@ Quit any running Markout first (`osascript -e 'tell application "Markout" to qui
 | `Window ▸ Welcome to Markout` while editing | Welcome window appears alongside, not as a tab |
 | `mv /tmp/markout-check/a.md /tmp/markout-check/renamed.md`, then reopen the welcome window | The `a.md` row is dimmed, unclickable, tooltip reads `File not found: …` |
 | Quit and relaunch | The recents list still lists the same files |
+| Close every window, then click the Dock icon | The welcome window appears |
+| Open a document already open in a tab, from the welcome window | Its existing tab comes forward; no duplicate; welcome window closes |
+| Set *System Settings ▸ Desktop & Dock ▸ Prefer tabs* to *Always*, relaunch | The welcome window and Settings (⌘,) stay separate windows, never tabs |
+| With the welcome window frontmost, open the Format menu | Every item is disabled; `⌘R` and the Export commands are disabled too |
+| Switch to another tab, then `⌘R` and Export | Both act on the newly selected tab's file |
 
 - [ ] **Step 5: Run the full test suite**
 
@@ -947,7 +1007,7 @@ rm -rf /tmp/markout-check
 
 ## Fallback Notes
 
-If Step 4 of Task 6 shows `NSDocumentController.shared.openDocument(withContentsOf:display:)` failing to open the file (SwiftUI installs its own document-controller subclass, and this path was not exercised during the spike), swap that call for the SwiftUI environment action inside `WelcomeView`:
+`NSDocumentController.shared.openDocument(withContentsOf:display:)` is the intended path, but it was not exercised during the spike — the welcome window was drawn, never clicked. If Step 4 of Task 6 shows it failing to open the file, swap that call for the SwiftUI environment action inside `WelcomeView`:
 
 ```swift
 @Environment(\.openDocument) private var openDocument
