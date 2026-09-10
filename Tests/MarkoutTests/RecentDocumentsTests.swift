@@ -71,3 +71,62 @@ struct RecentDocumentsTests {
         #expect(RecentDocumentsList.decode(future).isEmpty)
     }
 }
+
+extension RecentDocumentsTests {
+    private var enUS: Locale { Locale(identifier: "en_US_POSIX") }
+
+    private func calendar(_ timeZone: String = "UTC") -> Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: timeZone)!
+        calendar.locale = Locale(identifier: "en_US_POSIX")
+        return calendar
+    }
+
+    @Test func nameIsTheFileName() {
+        #expect(RecentDocumentDisplay.name(for: "/Users/u/notes/spec.md") == "spec.md")
+    }
+
+    @Test func directoryAbbreviatesTheHomeFolder() {
+        #expect(RecentDocumentDisplay.directory(
+            for: "/Users/u/notes/spec.md", homeDirectory: "/Users/u") == "~/notes")
+        #expect(RecentDocumentDisplay.directory(
+            for: "/opt/data/spec.md", homeDirectory: "/Users/u") == "/opt/data")
+        #expect(RecentDocumentDisplay.directory(
+            for: "/Users/u/spec.md", homeDirectory: "/Users/u") == "~")
+    }
+
+    @Test func directoryDoesNotAbbreviateAnotherUsersHome() {
+        #expect(RecentDocumentDisplay.directory(
+            for: "/Users/uu/notes/spec.md", homeDirectory: "/Users/u") == "/Users/uu/notes")
+    }
+
+    @Test func timestampShowsTimeForToday() {
+        let calendar = calendar()
+        let now = Date(timeIntervalSince1970: 1_789_041_600)          // 2026-09-10 12:00 UTC
+        let earlier = now.addingTimeInterval(-3600)                   // same day, 11:00 UTC
+
+        #expect(RecentDocumentDisplay.timestamp(
+            earlier, now: now, calendar: calendar, locale: enUS) == "Today 11:00")
+    }
+
+    @Test func timestampShowsYesterday() {
+        let calendar = calendar()
+        let now = Date(timeIntervalSince1970: 1_789_041_600)          // 2026-09-10 12:00 UTC
+        let yesterday = now.addingTimeInterval(-24 * 3600)            // 2026-09-09
+
+        #expect(RecentDocumentDisplay.timestamp(
+            yesterday, now: now, calendar: calendar, locale: enUS) == "Yesterday")
+    }
+
+    @Test func timestampShowsDateWithinTheYearAndYearBeyondIt() {
+        let calendar = calendar()
+        let now = Date(timeIntervalSince1970: 1_789_041_600)          // 2026-09-10 12:00 UTC
+        let sameYear = now.addingTimeInterval(-3 * 24 * 3600)         // 2026-09-07
+        let earlierYear = now.addingTimeInterval(-400 * 24 * 3600)    // 2025-08-06
+
+        #expect(RecentDocumentDisplay.timestamp(
+            sameYear, now: now, calendar: calendar, locale: enUS) == "Sep 7")
+        #expect(RecentDocumentDisplay.timestamp(
+            earlierYear, now: now, calendar: calendar, locale: enUS) == "Aug 6, 2025")
+    }
+}

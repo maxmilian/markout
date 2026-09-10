@@ -51,3 +51,40 @@ enum RecentDocumentsList {
         var entries: [RecentDocument]
     }
 }
+
+/// How one recents row is worded. Pure, so the wording is unit-tested rather than eyeballed.
+enum RecentDocumentDisplay {
+    static func name(for path: String) -> String {
+        (path as NSString).lastPathComponent
+    }
+
+    /// The containing directory, with the user's home folder shown as `~`.
+    static func directory(for path: String, homeDirectory: String) -> String {
+        let directory = (path as NSString).deletingLastPathComponent
+        if directory == homeDirectory { return "~" }
+        if directory.hasPrefix(homeDirectory + "/") {
+            return "~" + directory.dropFirst(homeDirectory.count)
+        }
+        return directory
+    }
+
+    /// `Today 14:02` / `Yesterday` / `Sep 7` / `Sep 7, 2025`.
+    static func timestamp(_ date: Date, now: Date, calendar: Calendar, locale: Locale) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        formatter.calendar = calendar
+        formatter.timeZone = calendar.timeZone
+
+        if calendar.isDate(date, inSameDayAs: now) {
+            formatter.dateFormat = "HH:mm"
+            return "Today " + formatter.string(from: date)
+        }
+        if let yesterday = calendar.date(byAdding: .day, value: -1, to: now),
+           calendar.isDate(date, inSameDayAs: yesterday) {
+            return "Yesterday"
+        }
+        let sameYear = calendar.component(.year, from: date) == calendar.component(.year, from: now)
+        formatter.dateFormat = sameYear ? "MMM d" : "MMM d, yyyy"
+        return formatter.string(from: date)
+    }
+}
