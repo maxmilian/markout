@@ -29,10 +29,16 @@ final class WelcomeWindowController {
             onOpen: { [weak self] url in
                 // Open first, close second: if the file vanished between drawing the list and the
                 // click, the welcome window must stay where it is rather than flicker away and back.
-                NSDocumentController.shared.openDocument(withContentsOf: url, display: true) { _, _, error in
+                NSDocumentController.shared.openDocument(withContentsOf: url, display: true) { document, _, error in
                     guard error == nil else {
                         RecentDocumentsStore.shared.reload()
                         return
+                    }
+                    // Recording here (not only in ContentView) also refreshes `openedAt` when the
+                    // document was already open: the document controller just presents its
+                    // existing window, so no new ContentView task fires.
+                    if let fileURL = document?.fileURL {
+                        RecentDocumentsStore.shared.record(fileURL)
                     }
                     self?.close()
                 }

@@ -18,9 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // The unit tests are hosted by this app, so launching them runs this delegate. Without
-        // this guard a welcome window pops up mid-test and steals focus.
-        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return }
+        guard !Self.isRunningTests else { return }
 
         DispatchQueue.main.asyncAfter(deadline: .now() + launchSettleDelay) {
             let controller = NSDocumentController.shared
@@ -38,10 +36,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// The unit tests are hosted by this app, so launching them runs this delegate. Without this
+    /// guard a welcome window pops up mid-test and steals focus. Swift Testing does not reliably
+    /// set XCTest's own environment keys, so probe for the XCTest class too.
+    private static var isRunningTests: Bool {
+        NSClassFromString("XCTestCase") != nil
+            || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+            || ProcessInfo.processInfo.environment["XCTestBundlePath"] != nil
+    }
+
     /// Clicking the Dock icon with no windows open lands on the welcome window rather than nothing.
+    /// Returns true — the reopen is handled here, and letting AppKit apply its default would open
+    /// a new untitled document on top of the welcome window.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
         guard !hasVisibleWindows, NSDocumentController.shared.documents.isEmpty else { return true }
         WelcomeWindowController.shared.show()
-        return false
+        return true
     }
 }

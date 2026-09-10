@@ -70,6 +70,19 @@ struct RecentDocumentsTests {
         let future = Data(#"{"version": 2, "entries": [{"path": "/tmp/a.md", "openedAt": 1}]}"#.utf8)
         #expect(RecentDocumentsList.decode(future).isEmpty)
     }
+
+    @Test func decodeDeduplicatesAndCapsAHandEditedFile() {
+        var paths = (0..<12).map { "/tmp/file\($0).md" }
+        paths.insert(paths[0], at: 0)   // duplicate of the newest entry
+
+        let entries = paths.enumerated().map { index, path in
+            RecentDocument(path: path, openedAt: now.addingTimeInterval(Double(-index)))
+        }
+        let decoded = RecentDocumentsList.decode(RecentDocumentsList.encode(entries))
+
+        #expect(decoded.count == RecentDocumentsList.maxCount)
+        #expect(Set(decoded.map(\.path)).count == decoded.count)
+    }
 }
 
 extension RecentDocumentsTests {

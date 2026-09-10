@@ -43,7 +43,13 @@ enum RecentDocumentsList {
         decoder.dateDecodingStrategy = .secondsSince1970
         guard let file = try? decoder.decode(StoredFile.self, from: data),
               file.version == 1 else { return [] }
+        // Deduplicate and cap at read time too: a hand-edited or externally written file can
+        // violate both invariants, and duplicate paths would break `ForEach(id: \.path)`.
+        var seen = Set<String>()
         return file.entries
+            .filter { seen.insert($0.path).inserted }
+            .prefix(maxCount)
+            .map { $0 }
     }
 
     private struct StoredFile: Codable {
