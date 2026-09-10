@@ -130,3 +130,42 @@ extension RecentDocumentsTests {
             earlierYear, now: now, calendar: calendar, locale: enUS) == "Aug 6, 2025")
     }
 }
+
+extension RecentDocumentsTests {
+    private func temporaryStoreURL() -> URL {
+        FileManager.default.temporaryDirectory
+            .appendingPathComponent("markout-recents-tests", isDirectory: true)
+            .appendingPathComponent("\(UUID().uuidString).json")
+    }
+
+    @Test func storeWritesAndReadsBackEntries() {
+        let url = temporaryStoreURL()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+
+        let store = RecentDocumentsStore(fileURL: url)
+        store.record(URL(fileURLWithPath: "/tmp/a.md"), at: now)
+        store.record(URL(fileURLWithPath: "/tmp/b.md"), at: now.addingTimeInterval(60))
+
+        let reopened = RecentDocumentsStore(fileURL: url)
+        #expect(reopened.entries.map(\.path) == ["/tmp/b.md", "/tmp/a.md"])
+    }
+
+    @Test func storeStartsEmptyWhenTheFileIsAbsent() {
+        let store = RecentDocumentsStore(fileURL: temporaryStoreURL())
+        #expect(store.entries.isEmpty)
+    }
+
+    @Test func storeStartsEmptyWhenTheFileIsCorrupt() throws {
+        let url = temporaryStoreURL()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("{ not json".utf8).write(to: url)
+
+        let store = RecentDocumentsStore(fileURL: url)
+        #expect(store.entries.isEmpty)
+
+        store.record(URL(fileURLWithPath: "/tmp/a.md"), at: now)
+        #expect(RecentDocumentsStore(fileURL: url).entries.map(\.path) == ["/tmp/a.md"])
+    }
+}

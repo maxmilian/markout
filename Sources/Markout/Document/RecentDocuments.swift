@@ -88,3 +88,39 @@ enum RecentDocumentDisplay {
         return formatter.string(from: date)
     }
 }
+
+/// Reads and writes the recents list. The thin I/O edge over `RecentDocumentsList`.
+final class RecentDocumentsStore: ObservableObject {
+    static let shared = RecentDocumentsStore(fileURL: RecentDocumentsStore.defaultFileURL)
+
+    @Published private(set) var entries: [RecentDocument] = []
+
+    private let fileURL: URL
+
+    init(fileURL: URL) {
+        self.fileURL = fileURL
+        reload()
+    }
+
+    /// `~/Library/Application Support/Markout/recents.json`.
+    static var defaultFileURL: URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+            .first ?? FileManager.default.temporaryDirectory
+        return base
+            .appendingPathComponent("Markout", isDirectory: true)
+            .appendingPathComponent("recents.json")
+    }
+
+    func reload() {
+        entries = RecentDocumentsList.decode(try? Data(contentsOf: fileURL))
+    }
+
+    /// Records `url` as most recently opened and persists the list. Write failures are ignored —
+    /// recents must never interrupt opening or saving a document.
+    func record(_ url: URL, at date: Date = Date()) {
+        entries = RecentDocumentsList.record(url, at: date, into: entries)
+        try? FileManager.default.createDirectory(
+            at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? RecentDocumentsList.encode(entries).write(to: fileURL, options: .atomic)
+    }
+}
