@@ -33,6 +33,8 @@ struct WindowTabbingAccessor: NSViewRepresentable {
     private func joinTabGroup(from view: NSView, context: Context) {
         guard !context.coordinator.joined else { return }
         guard let window = view.window else { return }
+        // Deliberately preferred over NSWindow.userTabbingPreference: documents always tab into
+        // the working group, whatever the user's system-wide "prefer tabs" setting is.
         window.tabbingMode = .preferred
         window.tabbingIdentifier = markoutDocumentTabbingIdentifier
 
@@ -45,8 +47,9 @@ struct WindowTabbingAccessor: NSViewRepresentable {
     /// The window whose tab group the new document should join.
     ///
     /// Preferring the key (then main) window keeps a new document in the group the user is working
-    /// in, and on that group's screen. Falling back to any document window would drop it into an
-    /// arbitrary group — including one the user just deliberately dragged out.
+    /// in, and on that group's screen. Any other document window is a last resort so the document
+    /// still tabs rather than floating alone — accepting that with several groups it may land in
+    /// one the user did not just work in.
     private func tabHost(for window: NSWindow) -> NSWindow? {
         func isCandidate(_ candidate: NSWindow) -> Bool {
             candidate !== window

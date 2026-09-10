@@ -46,11 +46,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Clicking the Dock icon with no windows open lands on the welcome window rather than nothing.
-    /// Returns true — the reopen is handled here, and letting AppKit apply its default would open
-    /// a new untitled document on top of the welcome window.
+    /// Returns false — AppKit's documentation makes false mean "the app handled the reopen itself";
+    /// returning true would let it run the default handling, which for a document-based app with no
+    /// visible windows is opening a new untitled document on top of the welcome window.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
-        guard !hasVisibleWindows, NSDocumentController.shared.documents.isEmpty else { return true }
+        guard !Self.isRunningTests,
+              !hasVisibleWindows, NSDocumentController.shared.documents.isEmpty else { return true }
         WelcomeWindowController.shared.show()
-        return true
+        return false
     }
 }

@@ -9,6 +9,15 @@ struct WelcomeView: View {
 
     private var homeDirectory: String { NSHomeDirectory() }
 
+    /// The welcome list is English-only copy, so rows format with a Gregorian calendar and a POSIX
+    /// English locale regardless of the user's system locale.
+    private var rowCalendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        return calendar
+    }
+    private var rowLocale: Locale { Locale(identifier: "en_US_POSIX") }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
@@ -58,7 +67,7 @@ struct WelcomeView: View {
                     Spacer()
                     Text(RecentDocumentDisplay.timestamp(
                         entry.openedAt, now: Date(),
-                        calendar: Calendar.current, locale: Locale.current))
+                        calendar: rowCalendar, locale: rowLocale))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
