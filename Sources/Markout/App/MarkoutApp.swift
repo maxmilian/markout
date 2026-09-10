@@ -12,6 +12,7 @@ private func performTextFinderAction(_ action: NSTextFinder.Action) {
 
 @main
 struct MarkoutApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @FocusedValue(\.documentActions) private var documentActions
 
     var body: some Scene {
@@ -65,6 +66,12 @@ struct MarkoutApp: App {
                 Button("List") { documentActions?.format(.list) }
                 Button("Link") { documentActions?.format(.link) }
                     .keyboardShortcut("k", modifiers: .command)
+            }
+            CommandGroup(before: .windowList) {
+                Button("Welcome to Markout") {
+                    WelcomeWindowController.shared.show()
+                }
+                Divider()
             }
         }
         Settings {
