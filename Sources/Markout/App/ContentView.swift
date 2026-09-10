@@ -103,6 +103,11 @@ struct ContentView: View {
             }
         }
         .frame(minWidth: 800, minHeight: 500)
+        .background(WindowTabbingAccessor())
+        .task(id: documentURL) {
+            guard let documentURL else { return }
+            RecentDocumentsStore.shared.record(documentURL)
+        }
         .toolbar {
             ToolbarItem(placement: .automatic) {
                 Button {
