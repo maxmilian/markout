@@ -54,6 +54,11 @@ Markout 面向仍然想要快速、原生 Markdown 编辑器的 macOS 用户：�
 
 ## 功能
 
+**窗口与文档**
+- 原生窗口标签页：新打开的文档会加入已有标签组（⌘⇧[ / ⌘⇧] 切换，拖出可独立成窗口）
+- 欢迎窗口列出最近文档：启动时、**Window ▸ Welcome to Markout**、或从 Dock 图标重新打开时显示
+- 自带最近文档列表（保留最新 10 条，文件不存在则变灰），保存在 `~/Library/Application Support/Markout/recents.json`
+
 **编辑**
 - 分栏编辑器 + 即时预览，渲染 debounce 150 ms
 - Markdown 语法高亮，并可切换编辑器颜色主题

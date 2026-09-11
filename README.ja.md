@@ -54,6 +54,11 @@ Markout は、macOS で高速なネイティブ Markdown エディタを使い�
 
 ## Features
 
+**Windows & documents**
+- ネイティブのウィンドウタブ — 新しい文書は既存のタブグループに加わります（⌘⇧[ / ⌘⇧] で切り替え、ドラッグで分離）
+- 最近使った文書を一覧するウェルカムウィンドウ — 起動時、**Window ▸ Welcome to Markout**、Dock アイコンからの再オープン時に表示
+- 独自の最近使った文書リスト（最新 10 件、存在しないファイルは淡色表示）。`~/Library/Application Support/Markout/recents.json` に保存
+
 **Editing**
 - 150 ms debounce の分割エディタ + ライブプレビュー
 - 切り替え可能なエディタテーマ付き Markdown シンタックスハイライト

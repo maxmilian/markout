@@ -54,6 +54,11 @@ Markout 適合仍然想要快速、原生 Markdown 編輯器的 macOS 使用者�
 
 ## 功能
 
+**視窗與文件**
+- 原生視窗分頁：新開的文件會加入既有分頁群組（⌘⇧[ / ⌘⇧] 切換，拖出可獨立成視窗）
+- 歡迎視窗列出最近文件：啟動時、**Window ▸ Welcome to Markout**、或從 Dock 圖示重新開啟時顯示
+- 自帶最近文件清單（保留最新 10 筆，檔案不存在則變灰），存放於 `~/Library/Application Support/Markout/recents.json`
+
 **編輯**
 - 分割編輯器 + 即時預覽，渲染 debounce 150 ms
 - Markdown 語法高亮，並可切換編輯器色彩主題
