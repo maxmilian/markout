@@ -54,6 +54,11 @@ Markout은 macOS에서 빠른 네이티브 Markdown 에디터를 원하는 사�
 
 ## Features
 
+**Windows & documents**
+- 네이티브 window tab — 새 문서는 기존 tab group에 합류합니다 (⌘⇧[ / ⌘⇧] 로 전환, 드래그해서 분리)
+- 최근 문서를 보여주는 welcome window — 실행 시, **Window ▸ Welcome to Markout**, Dock 아이콘으로 다시 열 때 표시
+- 자체 최근 문서 목록 (최신 10개, 없는 파일은 흐리게). `~/Library/Application Support/Markout/recents.json` 에 저장
+
 **Editing**
 - 150 ms debounce가 적용된 split editor + live preview
 - 전환 가능한 editor color theme가 있는 Markdown syntax highlighting

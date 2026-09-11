@@ -60,6 +60,11 @@ It focuses on:
 
 ## Features
 
+**Windows & documents**
+- Native window tabs — every document joins the existing tab group (⌘⇧[ / ⌘⇧] to switch, drag out to split)
+- Welcome window listing recent documents on launch, from **Window ▸ Welcome to Markout**, or on Dock-icon reopen
+- Own recent-documents list (10 newest, missing files dimmed), stored in `~/Library/Application Support/Markout/recents.json`
+
 **Editing**
 - Split editor + live preview with a 150 ms debounced render
 - Markdown syntax highlighting with switchable editor color themes
